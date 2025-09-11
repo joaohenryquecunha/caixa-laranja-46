@@ -95,100 +95,81 @@ export function LocalCategoryPieChart({ transactions, categories }: LocalCategor
   };
 
   return (
-    <Card className="bg-gradient-card border-border shadow-card p-4 h-full flex flex-col">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">
+    <Card className="bg-gradient-card border-border shadow-card p-6 h-full flex flex-col">
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-foreground">
           Distribuição por Categoria
         </h3>
       </div>
 
-      {/* Layout horizontal - Lista das categorias primeiro */}
       <div className="flex-1 flex flex-col">
-        {/* Resumo das Categorias - Formato horizontal compacto */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-          {categoryData.slice(0, 4).map((category) => (
-            <div 
-              key={category.categoryId}
-              className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/50"
-            >
-              <div 
-                className="w-4 h-4 rounded-full flex-shrink-0"
-                style={{ backgroundColor: category.color }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {category.categoryName}
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {category.percentage.toFixed(1)}%
-                  </span>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {formatCurrency(category.amount)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Mostrar categorias restantes se houver mais de 4 */}
-        {categoryData.length > 4 && (
-          <div className="max-h-24 overflow-y-auto mb-4">
-            <div className="grid grid-cols-1 gap-1">
-              {categoryData.slice(4).map((category) => (
-                <div 
-                  key={category.categoryId}
-                  className="flex items-center justify-between text-xs p-2 rounded bg-background/30"
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span className="text-muted-foreground truncate">
-                      {category.categoryName}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-foreground font-medium">
-                      {formatCurrency(category.amount)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {category.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Gráfico de Pizza - Menor e no final */}
-        <div className="flex justify-center">
-          <div className="h-32 w-32">
+        {/* Gráfico de Pizza - Grande e imponente */}
+        <div className="flex justify-center mb-6 flex-shrink-0">
+          <div className="h-64 w-64 sm:h-80 sm:w-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={categoryData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={20}
-                  outerRadius={55}
-                  paddingAngle={1}
+                  innerRadius={40}
+                  outerRadius={120}
+                  paddingAngle={2}
                   dataKey="amount"
                 >
                   {categoryData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={entry.color}
-                      className="transition-all duration-200 hover:opacity-80"
+                      className="transition-all duration-200 hover:opacity-80 cursor-pointer"
                     />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Resumo das Categorias - Abaixo do gráfico */}
+        <div className="flex-1 overflow-y-auto">
+          <div className={`grid gap-3 ${
+            categoryData.length <= 2 ? 'grid-cols-1' :
+            categoryData.length <= 4 ? 'grid-cols-1 sm:grid-cols-2' :
+            categoryData.length <= 6 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+            'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+          }`}>
+            {categoryData.map((category) => (
+              <div 
+                key={category.categoryId}
+                className="flex items-center gap-3 p-4 rounded-lg bg-background/50 border border-border/50 hover:bg-background/70 transition-colors"
+              >
+                <div 
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: category.color }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {category.categoryName}
+                      </span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {category.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        {formatCurrency(category.amount)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {category.transactionCount} transação{category.transactionCount !== 1 ? 'ões' : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

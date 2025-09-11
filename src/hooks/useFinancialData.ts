@@ -387,7 +387,8 @@ export function useFinancialData() {
         date: format(new Date(date), specificFilter.type === 'day' ? 'dd/MM' : specificFilter.type === 'month' ? 'dd/MM' : 'MMM yy'),
         balance: runningBalance,
         income: dayData.income,
-        expenses: dayData.expenses
+        expenses: dayData.expenses,
+        investments: dayData.investments
       };
     });
   }, [getFilteredTransactions, specificFilter.type]);

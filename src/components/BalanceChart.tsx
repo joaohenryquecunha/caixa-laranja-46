@@ -40,6 +40,9 @@ export function BalanceChart() {
                       <p className="text-destructive">
                         Despesas: {formatCurrency(data.expenses)}
                       </p>
+                      <p className="text-blue-400">
+                        Investimentos: {formatCurrency(data.investments)}
+                      </p>
                     </div>
                   </div>
                 );
@@ -56,6 +59,42 @@ export function BalanceChart() {
             activeDot={{ 
               r: 4, 
               fill: "hsl(var(--primary))",
+              strokeWidth: 0
+            }}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="income" 
+            stroke="#22c55e"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ 
+              r: 3, 
+              fill: "#22c55e",
+              strokeWidth: 0
+            }}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="expenses" 
+            stroke="#ef4444"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ 
+              r: 3, 
+              fill: "#ef4444",
+              strokeWidth: 0
+            }}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="investments" 
+            stroke="#06b6d4"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ 
+              r: 3, 
+              fill: "#06b6d4",
               strokeWidth: 0
             }}
           />

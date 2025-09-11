@@ -112,9 +112,9 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden min-h-0">
             {/* Left side - Chart */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 flex flex-col min-h-0">
               <LocalCategoryPieChart 
                 transactions={sortedTransactions}
                 categories={categories}
@@ -122,19 +122,20 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
             </div>
 
             {/* Right side - Transaction List */}
-            <div className="lg:col-span-2 flex flex-col min-h-0">
+            <div className="lg:col-span-1 flex flex-col min-h-0">
               {/* Results count */}
-              <div className="mb-4">
+              <div className="mb-4 flex-shrink-0">
                 <p className="text-sm text-muted-foreground">
                   {sortedTransactions.length} transações encontradas
                 </p>
               </div>
 
               {/* Transaction List */}
-              <div className="flex-1 overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
                 <TransactionList 
                   transactions={sortedTransactions} 
                   showDeleteButton={true}
+                  showScrollbar={false}
                 />
               </div>
             </div>

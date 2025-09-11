@@ -56,7 +56,7 @@ export function TransactionList({
   }
 
   return (
-    <div className={`space-y-3 p-4 ${!showScrollbar ? 'max-h-96 overflow-y-auto scrollbar-hide' : ''}`}>
+    <div className={`space-y-3 ${showScrollbar ? 'p-4' : 'px-4 pb-4'}`}>
       {transactions.map(transaction => {
         const category = getCategoryById(transaction.categoryId);
         const colorClass = getTransactionColor(transaction.type);

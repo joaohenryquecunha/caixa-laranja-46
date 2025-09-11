@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 217 17% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 19% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 217 19% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 15 100% 60%;
+    --primary-foreground: 217 17% 7%;
+
+    --secondary: 217 19% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 19% 18%;
+    --muted-foreground: 217 10% 64%;
+
+    --accent: 15 100% 60%;
+    --accent-foreground: 217 17% 7%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 19% 18%;
+    --input: 217 19% 18%;
+    --ring: 15 100% 60%;
+
+    --radius: 1rem;
+
+    /* Custom design tokens */
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+    
+    --warning: 48 100% 50%;
+    --warning-foreground: 217 17% 7%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(15 100% 60%), hsl(15 90% 55%));
+    --gradient-card: linear-gradient(135deg, hsl(217 19% 12%), hsl(217 19% 15%));
+    --gradient-balance: linear-gradient(90deg, hsl(15 100% 60%) 0%, hsl(25 100% 55%) 100%);
+    
+    /* Transition for smooth animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* Shadow tokens */
+    --shadow-primary: 0 10px 40px -10px hsl(15 100% 60% / 0.3);
+    --shadow-card: 0 8px 32px -8px hsl(217 17% 3% / 0.5);
+
+    /* Sidebar tokens */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  
+  /* Scrollbar hide utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;             /* Chrome, Safari and Opera */
+  }
+
+  .dark {
+    --background: 217 17% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 19% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 217 19% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 15 100% 60%;
+    --primary-foreground: 217 17% 7%;
+
+    --secondary: 217 19% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 19% 18%;
+    --muted-foreground: 217 10% 64%;
+
+    --accent: 15 100% 60%;
+    --accent-foreground: 217 17% 7%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 19% 18%;
+    --input: 217 19% 18%;
+    --ring: 15 100% 60%;
+    --sidebar-background: 217 17% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 15 100% 60%;
+    --sidebar-primary-foreground: 217 17% 7%;
+    --sidebar-accent: 217 19% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 19% 18%;
+    --sidebar-ring: 15 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

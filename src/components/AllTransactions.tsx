@@ -21,7 +21,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [filterCompany, setFilterCompany] = useState<string>('all');
+  const [filterCompany, setFilterCompany] = useState<string>('none');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const transactions = getFilteredTransactions();
@@ -117,8 +117,8 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
                 <SelectValue placeholder="Empresa" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">Nenhuma empresa</SelectItem>
                 <SelectItem value="all">Todas as empresas</SelectItem>
-                <SelectItem value="none">Sem empresa</SelectItem>
                 {companies.map(company => (
                   <SelectItem key={company.id} value={company.id}>
                     {company.name}

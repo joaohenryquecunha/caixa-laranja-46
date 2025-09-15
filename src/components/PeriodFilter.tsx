@@ -253,19 +253,20 @@ export function PeriodFilter({
                     <Building2 className="h-4 w-4" />
                     Empresa
                   </label>
-                  <Select
-                    value={tempFilter.companyId || 'all'}
-                    onValueChange={(value) => 
-                      setTempFilter(prev => ({ 
-                        ...prev, 
-                        companyId: value === 'all' ? undefined : value 
-                      }))
-                    }
+                    <Select
+                      value={tempFilter.companyId || 'none'}
+                      onValueChange={(value) => 
+                        setTempFilter(prev => ({ 
+                          ...prev, 
+                          companyId: value === 'none' || value === 'all' ? undefined : value 
+                        }))
+                      }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todas as empresas" />
                     </SelectTrigger>
                     <SelectContent className="z-50">
+                      <SelectItem value="none">Nenhuma empresa</SelectItem>
                       <SelectItem value="all">Todas as empresas</SelectItem>
                       {companies.map(company => (
                         <SelectItem key={company.id} value={company.id}>

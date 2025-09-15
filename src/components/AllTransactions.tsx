@@ -39,7 +39,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
     const matchesCategory = filterCategory === 'all' || transaction.categoryId === filterCategory;
     const matchesCompany = filterCompany === 'all' || 
       (filterCompany === 'none' && !transaction.companyId) ||
-      transaction.companyId === filterCompany;
+      (filterCompany !== 'none' && transaction.companyId === filterCompany);
 
     // Filtro de data
     const matchesDateRange = !dateRange?.from || !dateRange?.to || 

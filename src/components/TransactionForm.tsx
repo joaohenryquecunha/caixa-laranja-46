@@ -260,14 +260,14 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa</Label>
                 <Select
-                  value={formData.companyId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value }))}
+                  value={formData.companyId || "none"}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value === "none" ? "" : value }))}
                 >
                   <SelectTrigger className="bg-input border-border">
                     <SelectValue placeholder="Selecione uma empresa (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma empresa</SelectItem>
+                    <SelectItem value="none">Nenhuma empresa</SelectItem>
                     {companies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}

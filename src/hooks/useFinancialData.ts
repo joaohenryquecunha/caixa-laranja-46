@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { addMonths, isToday, isThisMonth, isThisYear, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, format, getDaysInMonth, isSameDay, isSameMonth, isSameYear } from 'date-fns';
-import { Transaction, Category, TransactionType, FinancialSummary } from '@/types/financial';
+import { Transaction, Category, TransactionType, FinancialSummary, Company } from '@/types/financial';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -9,6 +9,7 @@ export interface SpecificFilter {
   day?: number;
   month?: number;
   year?: number;
+  companyId?: string;
 }
 
 export interface ChartDataPoint {
@@ -20,6 +21,7 @@ export interface ChartDataPoint {
 
 const TRANSACTIONS_KEY = 'financial_transactions';
 const CATEGORIES_KEY = 'financial_categories';
+const COMPANIES_KEY = 'financial_companies';
 
 const DEFAULT_CATEGORIES: Category[] = [
   {
@@ -69,6 +71,7 @@ const DEFAULT_CATEGORIES: Category[] = [
 // Singleton para garantir que os dados sejam compartilhados
 let globalTransactions: Transaction[] = [];
 let globalCategories: Category[] = DEFAULT_CATEGORIES;
+let globalCompanies: Company[] = [];
 
 // Carregar dados do localStorage uma única vez
 const loadInitialData = () => {
@@ -95,6 +98,17 @@ const loadInitialData = () => {
       globalCategories = DEFAULT_CATEGORIES;
     }
   }
+
+  const savedCompanies = localStorage.getItem(COMPANIES_KEY);
+  if (savedCompanies) {
+    try {
+      globalCompanies = JSON.parse(savedCompanies);
+      console.log('📁 Empresas carregadas do cache:', globalCompanies.length);
+    } catch (e) {
+      console.error('❌ Erro ao carregar empresas:', e);
+      globalCompanies = [];
+    }
+  }
 };
 
 export function useFinancialData() {
@@ -103,6 +117,7 @@ export function useFinancialData() {
   
   const [transactions, setTransactions] = useState<Transaction[]>(() => [...globalTransactions]);
   const [categories, setCategories] = useState<Category[]>(() => [...globalCategories]);
+  const [companies, setCompanies] = useState<Company[]>(() => [...globalCompanies]);
   const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ type: 'all' });
 
   // Sincronizar alterações com o estado global e localStorage
@@ -129,10 +144,18 @@ export function useFinancialData() {
     }
   }, [categories]);
 
+  useEffect(() => {
+    if (companies !== globalCompanies) {
+      globalCompanies = [...companies];
+      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+    }
+  }, [companies]);
+
   const addRecurringTransactions = useCallback((data: {
     amount: number;
     description: string;
     categoryId: string;
+    companyId?: string;
     type: TransactionType;
     startDate: string;
     times: number;
@@ -161,6 +184,7 @@ export function useFinancialData() {
         amount: data.amount,
         description: `${data.description} (${i + 1}/${data.times})`,
         categoryId: data.categoryId,
+        companyId: data.companyId,
         type: data.type,
         date: transactionDate,
         createdAt: new Date().toISOString()
@@ -234,6 +258,42 @@ export function useFinancialData() {
     return globalTransactions.some(transaction => transaction.categoryId === id);
   }, []);
 
+  // Company management functions
+  const addCompany = useCallback((company: Omit<Company, 'id'>) => {
+    const newCompany: Company = {
+      ...company,
+      id: `company-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+    setCompanies(prev => [...prev, newCompany]);
+    console.log('🏢 Empresa adicionada:', newCompany);
+  }, []);
+
+  const updateCompany = useCallback((id: string, updatedCompany: Omit<Company, 'id'>) => {
+    setCompanies(prev => prev.map(company => 
+      company.id === id ? { ...updatedCompany, id } : company
+    ));
+    console.log('✏️ Empresa atualizada:', id, updatedCompany);
+    return { success: true, message: 'Empresa atualizada com sucesso.' };
+  }, []);
+
+  const deleteCompany = useCallback((id: string) => {
+    // Verificar se a empresa está sendo usada
+    const isInUse = globalTransactions.some(transaction => transaction.companyId === id);
+    
+    if (isInUse) {
+      console.log('❌ Não é possível deletar empresa em uso:', id);
+      return { success: false, message: 'Esta empresa está sendo usada em transações e não pode ser excluída.' };
+    }
+    
+    setCompanies(prev => prev.filter(company => company.id !== id));
+    console.log('🗑️ Empresa deletada:', id);
+    return { success: true, message: 'Empresa excluída com sucesso.' };
+  }, []);
+
+  const getCompanyById = useCallback((id: string) => {
+    return companies.find(c => c.id === id);
+  }, [companies]);
+
   const getFilteredTransactions = useCallback(() => {
     const now = new Date();
     
@@ -241,6 +301,11 @@ export function useFinancialData() {
     
     const filtered = transactions.filter(transaction => {
       const transactionDate = new Date(transaction.date);
+      
+      // Filter by company
+      if (specificFilter.companyId && transaction.companyId !== specificFilter.companyId) {
+        return false;
+      }
       
       switch (specificFilter.type) {
         case 'day':
@@ -396,6 +461,7 @@ export function useFinancialData() {
   return {
     transactions,
     categories,
+    companies,
     specificFilter,
     setSpecificFilter,
     addTransaction,
@@ -405,6 +471,10 @@ export function useFinancialData() {
     updateCategory,
     deleteCategory,
     isCategoryInUse,
+    addCompany,
+    updateCompany,
+    deleteCompany,
+    getCompanyById,
     getFinancialSummary,
     getRecentTransactions,
     getCategoryById,

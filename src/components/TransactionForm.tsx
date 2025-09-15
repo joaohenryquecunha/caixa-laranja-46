@@ -21,12 +21,13 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ onClose }: TransactionFormProps) {
-  const { addTransaction, addRecurringTransactions, categories } = useFinancialData();
+  const { addTransaction, addRecurringTransactions, categories, companies } = useFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     description: '',
     categoryId: '',
+    companyId: '',
     type: '' as TransactionType,
     date: new Date().toISOString().split('T')[0]
   });
@@ -73,6 +74,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         amount: parseFloat(formData.amount),
         description: formData.description,
         categoryId: formData.categoryId,
+        companyId: formData.companyId || undefined,
         type: formData.type,
         startDate: recurringData.startDate.toISOString().split('T')[0],
         times: times
@@ -95,6 +97,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         amount: parseFloat(formData.amount),
         description: formData.description,
         categoryId: formData.categoryId,
+        companyId: formData.companyId || undefined,
         type: formData.type,
         date: formData.date
       });
@@ -252,6 +255,28 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {companies.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="company">Empresa</Label>
+                <Select
+                  value={formData.companyId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value }))}
+                >
+                  <SelectTrigger className="bg-input border-border">
+                    <SelectValue placeholder="Selecione uma empresa (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma empresa</SelectItem>
+                    {companies.map(company => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>

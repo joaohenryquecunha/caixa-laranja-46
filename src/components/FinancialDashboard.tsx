@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useFinancialData } from '@/hooks/useFinancialData';
@@ -11,6 +11,7 @@ import { AllTransactions } from '@/components/AllTransactions';
 import { TestRecurringButton } from '@/components/TestRecurringButton';
 import { PeriodFilter } from '@/components/PeriodFilter';
 import { CategoryManager } from '@/components/CategoryManager';
+import { CompanyManager } from '@/components/CompanyManager';
 import { CategoryPieChart } from '@/components/CategoryPieChart';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -18,6 +19,7 @@ export function FinancialDashboard() {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showCompanyManager, setShowCompanyManager] = useState(false);
   const { 
     getFinancialSummary, 
     getRecentTransactions, 
@@ -27,7 +29,9 @@ export function FinancialDashboard() {
     setSpecificFilter,
     getAvailableYears,
     getAvailableMonths,
-    getAvailableDays
+    getAvailableDays,
+    companies,
+    getCompanyById
   } = useFinancialData();
   
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -74,6 +78,14 @@ export function FinancialDashboard() {
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Categorias
+              </Button>
+              <Button
+                onClick={() => setShowCompanyManager(true)}
+                variant="outline"
+                size="sm"
+              >
+                <Building2 className="mr-2 h-4 w-4" />
+                Empresas
               </Button>
               <Button
                 onClick={() => setShowTransactionForm(true)}
@@ -210,6 +222,11 @@ export function FinancialDashboard() {
         {/* Category Manager Modal */}
         {showCategoryManager && (
           <CategoryManager onClose={() => setShowCategoryManager(false)} />
+        )}
+
+        {/* Company Manager Modal */}
+        {showCompanyManager && (
+          <CompanyManager onClose={() => setShowCompanyManager(false)} />
         )}
 
         {/* Test buttons for development */}

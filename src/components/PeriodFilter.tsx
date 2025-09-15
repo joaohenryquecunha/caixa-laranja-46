@@ -1,9 +1,9 @@
-import { Calendar, Clock, BarChart3, Globe, Filter, X } from 'lucide-react';
+import { Calendar, Clock, BarChart3, Globe, Filter, X, Building2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { SpecificFilter, FilterPeriod } from '@/hooks/useFinancialData';
+import { SpecificFilter, FilterPeriod, useFinancialData } from '@/hooks/useFinancialData';
 
 interface PeriodFilterProps {
   specificFilter: SpecificFilter;
@@ -27,6 +27,7 @@ export function PeriodFilter({
   availableDays,
   getAvailableMonthsForYear
 }: PeriodFilterProps) {
+  const { companies, getCompanyById } = useFinancialData();
   const [isOpen, setIsOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState<SpecificFilter>(specificFilter);
 
@@ -242,6 +243,37 @@ export function PeriodFilter({
                       </Select>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Company Filter */}
+              {companies.length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Empresa
+                  </label>
+                  <Select
+                    value={tempFilter.companyId || 'all'}
+                    onValueChange={(value) => 
+                      setTempFilter(prev => ({ 
+                        ...prev, 
+                        companyId: value === 'all' ? undefined : value 
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas as empresas" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      <SelectItem value="all">Todas as empresas</SelectItem>
+                      {companies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 

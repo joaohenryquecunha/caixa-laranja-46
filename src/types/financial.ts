@@ -12,11 +12,17 @@ export interface Category {
   type: TransactionType;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+}
+
 export interface Transaction {
   id: string;
   amount: number;
   description: string;
   categoryId: string;
+  companyId?: string;
   type: TransactionType;
   date: string;
   createdAt: string;

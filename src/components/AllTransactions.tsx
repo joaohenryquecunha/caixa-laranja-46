@@ -17,22 +17,29 @@ interface AllTransactionsProps {
 }
 
 export function AllTransactions({ onClose }: AllTransactionsProps) {
-  const { getFilteredTransactions, categories } = useFinancialData();
+  const { getFilteredTransactions, categories, companies, getCompanyById } = useFinancialData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterCompany, setFilterCompany] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const transactions = getFilteredTransactions();
   
   const filteredTransactions = transactions.filter(transaction => {
     const category = categories.find(c => c.id === transaction.categoryId);
+    const company = transaction.companyId ? getCompanyById(transaction.companyId) : null;
+    
     const matchesSearch = 
       transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company?.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = filterType === 'all' || transaction.type === filterType;
     const matchesCategory = filterCategory === 'all' || transaction.categoryId === filterCategory;
+    const matchesCompany = filterCompany === 'all' || 
+      (filterCompany === 'none' && !transaction.companyId) ||
+      transaction.companyId === filterCompany;
 
     // Filtro de data
     const matchesDateRange = !dateRange?.from || !dateRange?.to || 
@@ -41,7 +48,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
         end: dateRange.to 
       });
 
-    return matchesSearch && matchesType && matchesCategory && matchesDateRange;
+    return matchesSearch && matchesType && matchesCategory && matchesCompany && matchesDateRange;
   });
 
   const sortedTransactions = filteredTransactions.sort((a, b) => 
@@ -67,7 +74,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -100,6 +107,21 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
                 {categories.map(category => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterCompany} onValueChange={setFilterCompany}>
+              <SelectTrigger className="bg-input border-border">
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                <SelectItem value="none">Sem empresa</SelectItem>
+                {companies.map(company => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
                   </SelectItem>
                 ))}
               </SelectContent>

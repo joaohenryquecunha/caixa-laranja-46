@@ -118,7 +118,12 @@ export function useFinancialData() {
   const [transactions, setTransactions] = useState<Transaction[]>(() => [...globalTransactions]);
   const [categories, setCategories] = useState<Category[]>(() => [...globalCategories]);
   const [companies, setCompanies] = useState<Company[]>(() => [...globalCompanies]);
-  const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ type: 'all' });
+  const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ 
+    type: 'month',
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    companyId: undefined
+  });
 
   // Sincronizar alterações com o estado global e localStorage
   useEffect(() => {
@@ -303,8 +308,13 @@ export function useFinancialData() {
       const transactionDate = new Date(transaction.date);
       
       // Filter by company
-      if (specificFilter.companyId && transaction.companyId !== specificFilter.companyId) {
-        return false;
+      if (specificFilter.companyId) {
+        if (specificFilter.companyId === 'none' && transaction.companyId) {
+          return false;
+        }
+        if (specificFilter.companyId !== 'none' && transaction.companyId !== specificFilter.companyId) {
+          return false;
+        }
       }
       
       switch (specificFilter.type) {

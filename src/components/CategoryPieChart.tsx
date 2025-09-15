@@ -150,9 +150,15 @@ export function CategoryPieChart() {
             Distribuição Financeira
           </h2>
           <p className="text-xs text-muted-foreground">
-            Período: {specificFilter.type === 'all' ? 'todos os períodos' : 
-                     specificFilter.type === 'month' ? 'mês atual' :
-                     specificFilter.type === 'year' ? 'ano atual' : 'dia atual'}
+            Período: {
+              specificFilter.type === 'day' 
+                ? (specificFilter.day ? `Dia ${specificFilter.day}` : 'Hoje')
+                : specificFilter.type === 'month' 
+                  ? (specificFilter.month !== undefined ? ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][specificFilter.month] + ' ' + (specificFilter.year || new Date().getFullYear()) : 'Este mês')
+                  : specificFilter.type === 'year' 
+                    ? (specificFilter.year || 'Este ano')
+                    : 'Todos os períodos'
+            }
           </p>
         </div>
 

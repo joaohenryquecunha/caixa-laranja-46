@@ -258,7 +258,7 @@ export function PeriodFilter({
                       onValueChange={(value) => 
                         setTempFilter(prev => ({ 
                           ...prev, 
-                          companyId: value === 'none' || value === 'all' ? undefined : value 
+                          companyId: value === 'none' ? undefined : value 
                         }))
                       }
                   >

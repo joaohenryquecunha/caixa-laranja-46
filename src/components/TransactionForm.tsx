@@ -29,7 +29,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     categoryId: '',
     companyId: '',
     type: '' as TransactionType,
-    date: new Date().toISOString().split('T')[0]
+    date: format(new Date(), 'yyyy-MM-dd')
   });
   
   const [isRecurring, setIsRecurring] = useState(false);

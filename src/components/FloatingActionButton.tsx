@@ -40,7 +40,7 @@ export function FloatingActionButton({
       <div className="fixed bottom-6 right-6 z-50 md:hidden">
         {/* Menu de opções */}
         {isMenuOpen && (
-          <div className="absolute bottom-16 right-0 mb-2">
+          <div className="fixed top-4 right-4 z-50">
             <Card className="bg-background border-border shadow-lg p-2 min-w-[200px]">
               <div className="space-y-2">
                 <Button

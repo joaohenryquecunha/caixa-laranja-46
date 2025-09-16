@@ -13,6 +13,7 @@ import { PeriodFilter } from '@/components/PeriodFilter';
 import { CategoryManager } from '@/components/CategoryManager';
 import { CompanyManager } from '@/components/CompanyManager';
 import { CategoryPieChart } from '@/components/CategoryPieChart';
+import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { formatCurrency } from '@/lib/formatters';
 
 export function FinancialDashboard() {
@@ -70,7 +71,8 @@ export function FinancialDashboard() {
               availableDays={availableDays}
               getAvailableMonthsForYear={getAvailableMonths}
             />
-            <div className="flex gap-2">
+            {/* Botões visíveis apenas no desktop */}
+            <div className="hidden md:flex gap-2">
               <Button
                 onClick={() => setShowCategoryManager(true)}
                 variant="outline"
@@ -231,6 +233,13 @@ export function FinancialDashboard() {
 
         {/* Test buttons for development */}
         <TestRecurringButton />
+
+        {/* Floating Action Button para Mobile */}
+        <FloatingActionButton
+          onNewTransaction={() => setShowTransactionForm(true)}
+          onCategoryManager={() => setShowCategoryManager(true)}
+          onCompanyManager={() => setShowCompanyManager(true)}
+        />
       </div>
     </div>
   );

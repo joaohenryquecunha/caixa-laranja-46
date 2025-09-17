@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Settings, Building2, Menu, X } from 'lucide-react';
+import { Plus, Settings, Building2, Menu, X, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ export function FloatingActionButton({
   onCategoryManager, 
   onCompanyManager 
 }: FloatingActionButtonProps) {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -74,6 +76,24 @@ export function FloatingActionButton({
           <div className="absolute inset-0 bg-background/95 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex flex-col h-full pt-20 px-6">
               <div className="space-y-4">
+                <Button
+                  onClick={() => {
+                    navigate('/metas');
+                    setIsMenuOpen(false);
+                  }}
+                  variant="ghost"
+                  size="lg"
+                  className="w-full justify-start h-16 text-left bg-card/50 hover:bg-card/80 border border-border/50"
+                >
+                  <div className="p-3 bg-primary/20 rounded-lg mr-4">
+                    <Target className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Metas</div>
+                    <div className="text-sm text-muted-foreground">Gerenciar metas financeiras</div>
+                  </div>
+                </Button>
+                
                 <Button
                   onClick={() => handleAction(onCategoryManager)}
                   variant="ghost"

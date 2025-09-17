@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2 } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useFinancialData } from '@/hooks/useFinancialData';
@@ -17,6 +18,7 @@ import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { formatCurrency } from '@/lib/formatters';
 
 export function FinancialDashboard() {
+  const navigate = useNavigate();
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -73,6 +75,14 @@ export function FinancialDashboard() {
             />
             {/* Botões visíveis apenas no desktop */}
             <div className="hidden md:flex gap-2">
+              <Button
+                onClick={() => navigate('/metas')}
+                variant="outline"
+                size="sm"
+              >
+                <Target className="mr-2 h-4 w-4" />
+                Metas
+              </Button>
               <Button
                 onClick={() => setShowCategoryManager(true)}
                 variant="outline"

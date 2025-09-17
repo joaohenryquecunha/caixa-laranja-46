@@ -158,12 +158,12 @@ export function FinancialDashboard() {
 
           <Card className="bg-gradient-card border-border shadow-card p-6">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-primary/20 rounded-lg">
-                <DollarSign className="h-5 w-5 text-primary" />
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <DollarSign className="h-5 w-5 text-blue-500" />
               </div>
               <div>
                 <p className="text-muted-foreground text-sm">Investimentos</p>
-                <p className="text-xl font-bold text-primary">
+                <p className="text-xl font-bold text-blue-500">
                   {formatCurrency(summary.totalInvestments)}
                 </p>
               </div>

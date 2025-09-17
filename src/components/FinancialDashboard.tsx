@@ -194,7 +194,7 @@ export function FinancialDashboard() {
                 </Button>
               </div>
             </div>
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto scrollbar-hide">
               <TransactionList 
                 transactions={getFilteredTransactions()} 
                 onEditTransaction={(transaction) => {

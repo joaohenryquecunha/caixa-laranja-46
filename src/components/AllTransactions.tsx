@@ -153,7 +153,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
               </div>
 
               {/* Transaction List */}
-              <div className="flex-1 overflow-y-auto scrollbar-none md:scrollbar-thin md:scrollbar-thumb-border md:scrollbar-track-transparent">
+              <div className="flex-1 overflow-y-auto scrollbar-hide">
                 <TransactionList 
                   transactions={sortedTransactions} 
                   showDeleteButton={true}

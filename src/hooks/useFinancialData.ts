@@ -14,9 +14,11 @@ export interface SpecificFilter {
 
 export interface ChartDataPoint {
   date: string;
+  tooltipDate?: string;
   balance: number;
   income: number;
   expenses: number;
+  investments: number;
 }
 
 const TRANSACTIONS_KEY = 'financial_transactions';
@@ -474,16 +476,22 @@ export function useFinancialData() {
       
       // Format display based on filter type
       let displayDate = '';
+      let tooltipDate = '';
+      
       if (specificFilter.type === 'month') {
-        displayDate = format(new Date(period), 'dd'); // Apenas o dia
+        displayDate = format(new Date(period), 'dd'); // Apenas o dia para o eixo X
+        tooltipDate = format(new Date(period), 'dd/MMM/yyyy'); // "01/set/2025" para o tooltip
       } else if (specificFilter.type === 'year') {
-        displayDate = format(new Date(period + '-01'), 'MMM'); // Apenas o mês
+        displayDate = format(new Date(period + '-01'), 'MMM'); // Apenas o mês para o eixo X
+        tooltipDate = format(new Date(period + '-01'), 'MMM/yyyy'); // "jan/2025" para o tooltip
       } else {
         displayDate = format(new Date(period), 'dd/MM');
+        tooltipDate = format(new Date(period), 'dd/MM/yyyy');
       }
       
       return {
         date: displayDate,
+        tooltipDate: tooltipDate,
         balance: runningBalance,
         income: periodData.income,
         expenses: periodData.expenses,

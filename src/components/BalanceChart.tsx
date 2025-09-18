@@ -29,7 +29,7 @@ export function BalanceChart() {
                 const data = payload[0].payload;
                 return (
                   <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                    <p className="text-sm font-medium text-foreground mb-2">{label}</p>
+                    <p className="text-sm font-medium text-foreground mb-2">{data.tooltipDate || label}</p>
                     <div className="space-y-1 text-xs">
                       <p className="text-primary">
                         Saldo: {formatCurrency(data.balance)}

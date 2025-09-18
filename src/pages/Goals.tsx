@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Target, Trophy, TrendingUp } from 'lucide-react';
+import { Plus, Target, Trophy, TrendingUp, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useGoals } from '@/hooks/useGoals';
 import { GoalForm } from '@/components/GoalForm';
 import { GoalCard } from '@/components/GoalCard';
@@ -10,6 +11,7 @@ import { Goal } from '@/types/goals';
 import { formatCurrency } from '@/lib/formatters';
 
 export default function Goals() {
+  const navigate = useNavigate();
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
   const { goals, deleteGoal, getActiveGoals, getCompletedGoals } = useGoals();
@@ -35,14 +37,24 @@ export default function Goals() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center space-x-2">
-              <Target className="h-6 w-6 text-primary" />
-              <span>Metas Financeiras</span>
-            </h1>
-            <p className="text-muted-foreground">
-              Defina e acompanhe suas metas de economia
-            </p>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center space-x-2">
+                <Target className="h-6 w-6 text-primary" />
+                <span>Metas Financeiras</span>
+              </h1>
+              <p className="text-muted-foreground">
+                Defina e acompanhe suas metas de economia
+              </p>
+            </div>
           </div>
           <Button
             onClick={() => setShowGoalForm(true)}

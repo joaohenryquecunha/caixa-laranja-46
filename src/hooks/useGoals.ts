@@ -65,12 +65,14 @@ export function useGoals() {
 
   // Atualizar progresso das metas baseado em transações
   useEffect(() => {
-    goals.forEach(goal => {
-      if (!goal.completed) {
-        updateGoalProgress(goal.id);
-      }
-    });
-  }, [transactions, goals]);
+    if (goals.length > 0) {
+      goals.forEach(goal => {
+        if (!goal.completed) {
+          updateGoalProgress(goal.id);
+        }
+      });
+    }
+  }, [transactions]); // Removido goals da dependência para evitar loop
 
   const addGoal = useCallback((goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => {
     const summary = getFinancialSummary();

@@ -432,41 +432,65 @@ export function useFinancialData() {
       return [];
     }
 
-    // Group transactions by date
-    const transactionsByDate = filteredTransactions.reduce((acc, transaction) => {
-      const date = transaction.date;
-      if (!acc[date]) {
-        acc[date] = { income: 0, expenses: 0, investments: 0 };
+    // Group transactions based on filter type
+    const transactionsByPeriod = filteredTransactions.reduce((acc, transaction) => {
+      let periodKey = '';
+      
+      // Para filtro de mês, agrupe por dias
+      if (specificFilter.type === 'month') {
+        periodKey = format(new Date(transaction.date), 'yyyy-MM-dd');
+      }
+      // Para filtro de ano, agrupe por meses  
+      else if (specificFilter.type === 'year') {
+        periodKey = format(new Date(transaction.date), 'yyyy-MM');
+      }
+      // Para outros filtros (dia, all), use a data completa
+      else {
+        periodKey = transaction.date;
+      }
+      
+      if (!acc[periodKey]) {
+        acc[periodKey] = { income: 0, expenses: 0, investments: 0 };
       }
       
       if (transaction.type === TransactionType.INCOME) {
-        acc[date].income += transaction.amount;
+        acc[periodKey].income += transaction.amount;
       } else if (transaction.type === TransactionType.EXPENSE) {
-        acc[date].expenses += transaction.amount;
+        acc[periodKey].expenses += transaction.amount;
       } else if (transaction.type === TransactionType.INVESTMENT) {
-        acc[date].investments += transaction.amount;
+        acc[periodKey].investments += transaction.amount;
       }
       
       return acc;
     }, {} as Record<string, { income: number; expenses: number; investments: number }>);
 
-    // Sort dates and create chart data
-    const sortedDates = Object.keys(transactionsByDate).sort();
+    // Sort periods and create chart data
+    const sortedPeriods = Object.keys(transactionsByPeriod).sort();
     let runningBalance = 0;
     
-    return sortedDates.map(date => {
-      const dayData = transactionsByDate[date];
-      runningBalance += dayData.income - dayData.expenses - dayData.investments;
+    return sortedPeriods.map(period => {
+      const periodData = transactionsByPeriod[period];
+      runningBalance += periodData.income - periodData.expenses - periodData.investments;
+      
+      // Format display based on filter type
+      let displayDate = '';
+      if (specificFilter.type === 'month') {
+        displayDate = format(new Date(period), 'dd'); // Apenas o dia
+      } else if (specificFilter.type === 'year') {
+        displayDate = format(new Date(period + '-01'), 'MMM'); // Apenas o mês
+      } else {
+        displayDate = format(new Date(period), 'dd/MM');
+      }
       
       return {
-        date: format(new Date(date), specificFilter.type === 'day' ? 'dd/MM' : specificFilter.type === 'month' ? 'dd/MM' : 'MMM yy'),
+        date: displayDate,
         balance: runningBalance,
-        income: dayData.income,
-        expenses: dayData.expenses,
-        investments: dayData.investments
+        income: periodData.income,
+        expenses: periodData.expenses,
+        investments: periodData.investments
       };
     });
-  }, [getFilteredTransactions, specificFilter.type]);
+  }, [getFilteredTransactions, specificFilter]);
 
   return {
     transactions,

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Target, Calendar, DollarSign } from 'lucide-react';
-import { useGoals } from '@/hooks/useGoals';
+// removed useGoals import
 import { useFinancialData } from '@/hooks/useFinancialData';
 import { formatCurrency } from '@/lib/formatters';
 import { Goal } from '@/types/goals';
@@ -14,10 +14,11 @@ import { format } from 'date-fns';
 interface GoalFormProps {
   onClose: () => void;
   editingGoal?: Goal;
+  addGoal: (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => string;
+  updateGoal: (goalId: string, updates: Partial<Goal>) => void;
 }
 
-export function GoalForm({ onClose, editingGoal }: GoalFormProps) {
-  const { addGoal, updateGoal } = useGoals();
+export function GoalForm({ onClose, editingGoal, addGoal, updateGoal }: GoalFormProps) {
   const { getFinancialSummary } = useFinancialData();
   const summary = getFinancialSummary();
 

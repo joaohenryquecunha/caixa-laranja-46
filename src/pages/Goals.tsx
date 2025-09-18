@@ -14,7 +14,7 @@ export default function Goals() {
   const navigate = useNavigate();
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
-  const { goals, deleteGoal, getActiveGoals, getCompletedGoals } = useGoals();
+  const { goals, deleteGoal, getActiveGoals, getCompletedGoals, addGoal, updateGoal } = useGoals();
 
   const activeGoals = getActiveGoals();
   const completedGoals = getCompletedGoals();
@@ -199,6 +199,8 @@ export default function Goals() {
           <GoalForm
             onClose={handleCloseForm}
             editingGoal={editingGoal}
+            addGoal={addGoal}
+            updateGoal={updateGoal}
           />
         )}
       </div>

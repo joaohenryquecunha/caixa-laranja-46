@@ -59,10 +59,9 @@ export function useGoals() {
 
   // Salvar histórico no localStorage
   useEffect(() => {
-    if (goalHistory.length > 0 || globalGoalHistory.length > 0) {
-      localStorage.setItem(GOAL_HISTORY_KEY, JSON.stringify(goalHistory));
-      globalGoalHistory = [...goalHistory];
-    }
+    console.log('💾 Salvando histórico no localStorage:', goalHistory);
+    localStorage.setItem(GOAL_HISTORY_KEY, JSON.stringify(goalHistory));
+    globalGoalHistory = [...goalHistory];
   }, [goalHistory]);
 
   // Atualizar progresso das metas baseado em transações

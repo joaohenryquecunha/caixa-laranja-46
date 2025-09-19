@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency } from '@/lib/formatters';
 import { TransactionType } from '@/types/financial';
 
@@ -21,7 +21,7 @@ export function CategoryPieChart() {
     getCategoryById, 
     categories, 
     specificFilter 
-  } = useFinancialData();
+  } = useSupabaseFinancialData();
 
   const categoryData = useMemo(() => {
     console.log('🔄 Recalculando dados do gráfico com filtro:', specificFilter);

@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionType } from '@/types/financial';
 import { toast } from '@/components/ui/use-toast';
 
 export function TestRecurringButton() {
-  const { addRecurringTransactions } = useFinancialData();
+  const { addRecurringTransactions } = useSupabaseFinancialData();
 
   const handleTestRecurring = () => {
     // Limpar dados existentes para teste limpo

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { SpecificFilter, FilterPeriod, useFinancialData } from '@/hooks/useFinancialData';
+import { SpecificFilter, FilterPeriod, useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 
 interface PeriodFilterProps {
   specificFilter: SpecificFilter;
@@ -27,7 +27,7 @@ export function PeriodFilter({
   availableDays,
   getAvailableMonthsForYear
 }: PeriodFilterProps) {
-  const { companies, getCompanyById } = useFinancialData();
+  const { companies, getCompanyById } = useSupabaseFinancialData();
   const [isOpen, setIsOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState<SpecificFilter>(specificFilter);
 

@@ -3,7 +3,7 @@ import { Plus, Edit2, Trash2, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { toast } from 'sonner';
 
 interface CompanyManagerProps {
@@ -11,7 +11,7 @@ interface CompanyManagerProps {
 }
 
 export function CompanyManager({ onClose }: CompanyManagerProps) {
-  const { companies, addCompany, updateCompany, deleteCompany } = useFinancialData();
+  const { companies, addCompany, updateCompany, deleteCompany } = useSupabaseFinancialData();
   const [newCompanyName, setNewCompanyName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -32,18 +32,18 @@ export function CompanyManager({ onClose }: CompanyManagerProps) {
     setEditingName(name);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingName.trim()) {
       toast.error('Nome da empresa é obrigatório');
       return;
     }
 
-    const result = updateCompany(editingId!, { name: editingName.trim() });
-    if (result.success) {
+    const result = await updateCompany(editingId!, { name: editingName.trim() });
+    if (result && result.success) {
       toast.success(result.message);
       setEditingId(null);
       setEditingName('');
-    } else {
+    } else if (result) {
       toast.error(result.message);
     }
   };
@@ -53,11 +53,11 @@ export function CompanyManager({ onClose }: CompanyManagerProps) {
     setEditingName('');
   };
 
-  const handleDeleteCompany = (id: string) => {
-    const result = deleteCompany(id);
-    if (result.success) {
+  const handleDeleteCompany = async (id: string) => {
+    const result = await deleteCompany(id);
+    if (result && result.success) {
       toast.success(result.message);
-    } else {
+    } else if (result) {
       toast.error(result.message);
     }
   };

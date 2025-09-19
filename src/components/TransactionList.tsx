@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { Transaction, TransactionType } from '@/types/financial';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from '@/components/ui/use-toast';
@@ -20,10 +20,12 @@ export function TransactionList({
   onDeleteTransaction,
   showScrollbar = true 
 }: TransactionListProps) {
-  const { deleteTransaction, getCategoryById } = useFinancialData();
+  const { getCategoryById } = useSupabaseFinancialData();
 
   const handleDelete = (id: string) => {
-    deleteTransaction(id);
+    if (onDeleteTransaction) {
+      onDeleteTransaction(id);
+    }
     toast({
       title: "Transação removida",
       description: "A transação foi removida com sucesso.",

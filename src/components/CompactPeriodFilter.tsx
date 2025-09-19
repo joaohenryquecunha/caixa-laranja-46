@@ -1,6 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SpecificFilter, FilterPeriod } from '@/hooks/useFinancialData';
+import { SpecificFilter, FilterPeriod } from '@/hooks/useSupabaseFinancialData';
 
 interface CompactPeriodFilterProps {
   specificFilter: SpecificFilter;

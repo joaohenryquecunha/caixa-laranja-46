@@ -1,9 +1,9 @@
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency } from '@/lib/formatters';
 
 export function BalanceChart() {
-  const { getChartData } = useFinancialData();
+  const { getChartData } = useSupabaseFinancialData();
   const chartData = getChartData();
 
   if (chartData.length === 0) {

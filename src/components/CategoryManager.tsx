@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ColorPicker } from '@/components/ColorPicker';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionType, Category } from '@/types/financial';
 import { toast } from '@/hooks/use-toast';
 
@@ -27,7 +27,7 @@ const TYPE_LABELS = {
 };
 
 export function CategoryManager({ onClose }: CategoryManagerProps) {
-  const { categories, addCategory, updateCategory, deleteCategory, isCategoryInUse } = useFinancialData();
+  const { categories, addCategory, updateCategory, deleteCategory, isCategoryInUse } = useSupabaseFinancialData();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -59,13 +59,15 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     setShowAddForm(false);
   };
 
-  const handleDelete = (categoryId: string) => {
-    const result = deleteCategory(categoryId);
-    toast({
-      title: result.success ? "Sucesso!" : "Erro",
-      description: result.message,
-      variant: result.success ? "default" : "destructive"
-    });
+  const handleDelete = async (categoryId: string) => {
+    const result = await deleteCategory(categoryId);
+    if (result) {
+      toast({
+        title: result.success ? "Sucesso!" : "Erro",
+        description: result.message,
+        variant: result.success ? "default" : "destructive"
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {

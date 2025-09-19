@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Target, Calendar, DollarSign } from 'lucide-react';
 // removed useGoals import
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency } from '@/lib/formatters';
 import { Goal } from '@/types/goals';
 import { format } from 'date-fns';
@@ -19,7 +19,7 @@ interface GoalFormProps {
 }
 
 export function GoalForm({ onClose, editingGoal, addGoal, updateGoal }: GoalFormProps) {
-  const { getFinancialSummary } = useFinancialData();
+  const { getFinancialSummary } = useSupabaseFinancialData();
   const summary = getFinancialSummary();
 
   const [formData, setFormData] = useState({

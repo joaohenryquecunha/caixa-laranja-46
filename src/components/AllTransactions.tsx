@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionList } from '@/components/TransactionList';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { LocalCategoryPieChart } from '@/components/LocalCategoryPieChart';
@@ -17,7 +17,7 @@ interface AllTransactionsProps {
 }
 
 export function AllTransactions({ onClose }: AllTransactionsProps) {
-  const { getFilteredTransactions, categories, companies, getCompanyById } = useFinancialData();
+  const { getFilteredTransactions, categories, companies, getCompanyById } = useSupabaseFinancialData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');

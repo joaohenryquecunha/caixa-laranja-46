@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useFinancialData } from '@/hooks/useFinancialData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionType } from '@/types/financial';
 import { CategoryManager } from '@/components/CategoryManager';
 import { toast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ onClose }: TransactionFormProps) {
-  const { addTransaction, addRecurringTransactions, categories, companies } = useFinancialData();
+  const { addTransaction, addRecurringTransactions, categories, companies } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',

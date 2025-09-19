@@ -3,8 +3,7 @@ import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2, 
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useFinancialData } from '@/hooks/useFinancialData';
-import { useSampleData } from '@/hooks/useSampleData';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionForm } from '@/components/TransactionForm';
 import { TransactionList } from '@/components/TransactionList';
 import { BalanceChart } from '@/components/BalanceChart';
@@ -34,13 +33,19 @@ export function FinancialDashboard() {
     getAvailableMonths,
     getAvailableDays,
     companies,
-    getCompanyById
-  } = useFinancialData();
+    getCompanyById,
+    loading
+  } = useSupabaseFinancialData();
   
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  
-  // Load sample data on first visit
-  useSampleData();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   const summary = getFinancialSummary();
   const recentTransactions = getRecentTransactions();

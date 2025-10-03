@@ -91,6 +91,111 @@ export function useSupabaseFinancialData() {
     }
   }, [user, authLoading]);
 
+  // Real-time updates for transactions
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setTransactions(prev => [payload.new as Transaction, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setTransactions(prev => 
+              prev.map(t => t.id === payload.new.id ? payload.new as Transaction : t)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setTransactions(prev => 
+              prev.filter(t => t.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Real-time updates for categories
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('categories-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categories',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setCategories(prev => [...prev, payload.new as Category]);
+          } else if (payload.eventType === 'UPDATE') {
+            setCategories(prev => 
+              prev.map(c => c.id === payload.new.id ? payload.new as Category : c)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setCategories(prev => 
+              prev.filter(c => c.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Real-time updates for companies
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('companies-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'companies',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setCompanies(prev => [...prev, payload.new as Company]);
+          } else if (payload.eventType === 'UPDATE') {
+            setCompanies(prev => 
+              prev.map(c => c.id === payload.new.id ? payload.new as Company : c)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setCompanies(prev => 
+              prev.filter(c => c.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const loadData = async () => {
     if (!user) return;
     

@@ -108,7 +108,7 @@ export function useSupabaseFinancialData() {
     if (!user) return;
 
     const channel = supabase
-      .channel('transactions-changes')
+      .channel(`transactions-changes-${user.id}-${Date.now()}-${Math.random()}`)
       .on(
         'postgres_changes',
         {
@@ -147,7 +147,7 @@ export function useSupabaseFinancialData() {
     if (!user) return;
 
     const channel = supabase
-      .channel('categories-changes')
+      .channel(`categories-changes-${user.id}-${Date.now()}-${Math.random()}`)
       .on(
         'postgres_changes',
         {
@@ -182,7 +182,7 @@ export function useSupabaseFinancialData() {
     if (!user) return;
 
     const channel = supabase
-      .channel('companies-changes')
+      .channel(`companies-changes-${user.id}-${Date.now()}-${Math.random()}`)
       .on(
         'postgres_changes',
         {
@@ -362,23 +362,12 @@ export function useSupabaseFinancialData() {
       return;
     }
 
-    const newTransaction: Transaction = {
-      id: data.id,
-      amount: Number(data.amount),
-      description: data.description,
-      categoryId: data.category_id,
-      companyId: data.company_id || undefined,
-      type: data.type as TransactionType,
-      date: data.date,
-      createdAt: data.created_at
-    };
+    const newTransaction: Transaction = mapDbTransaction(data);
 
+    // Otimista + sincroniza com o servidor para evitar discrepâncias entre abas
     setTransactions(prev => [newTransaction, ...prev]);
-    
-    toast({
-      title: "Sucesso",
-      description: "Transação adicionada com sucesso"
-    });
+    // Força recarregar do banco para garantir consistência e refletir RLS/ordenção
+    await loadTransactions();
   }, [user, toast]);
 
   const addRecurringTransactions = useCallback(async (data: {

@@ -63,6 +63,18 @@ const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   }
 ];
 
+// Normalize DB row -> Transaction type used in the app
+const mapDbTransaction = (tx: any): Transaction => ({
+  id: tx.id,
+  amount: Number(tx.amount),
+  description: tx.description,
+  categoryId: tx.category_id,
+  companyId: tx.company_id || undefined,
+  type: tx.type as TransactionType,
+  date: tx.date,
+  createdAt: tx.created_at
+});
+
 export function useSupabaseFinancialData() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -107,14 +119,18 @@ export function useSupabaseFinancialData() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setTransactions(prev => [payload.new as Transaction, ...prev]);
+            const tx = mapDbTransaction(payload.new);
+            setTransactions(prev => [tx, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
+            const tx = mapDbTransaction(payload.new);
             setTransactions(prev => 
-              prev.map(t => t.id === payload.new.id ? payload.new as Transaction : t)
+              prev.map(t => t.id === tx.id ? tx : t)
             );
           } else if (payload.eventType === 'DELETE') {
+            const oldId = payload.old?.id;
+            if (!oldId) return;
             setTransactions(prev => 
-              prev.filter(t => t.id !== payload.old.id)
+              prev.filter(t => t.id !== oldId)
             );
           }
         }

@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency } from '@/lib/formatters';
-import { TransactionType } from '@/types/financial';
+import { TransactionType, Transaction, Category } from '@/types/financial';
+import type { SpecificFilter } from '@/hooks/useSupabaseFinancialData';
 
 interface CategoryData {
   categoryId: string;
@@ -15,20 +14,18 @@ interface CategoryData {
   transactionCount: number;
 }
 
-export function CategoryPieChart() {
-  const { 
-    getFilteredTransactions, 
-    getCategoryById, 
-    categories, 
-    specificFilter 
-  } = useSupabaseFinancialData();
+interface CategoryPieChartProps {
+  transactions: Transaction[];
+  specificFilter: SpecificFilter;
+  getCategoryById: (id: string) => Category | undefined;
+}
 
+export function CategoryPieChart({ transactions, getCategoryById, specificFilter }: CategoryPieChartProps) {
   const categoryData = useMemo(() => {
     console.log('🔄 Recalculando dados do gráfico com filtro:', specificFilter);
-    const filteredTransactions = getFilteredTransactions();
-    
+    const filteredTransactions = transactions;
     console.log('📊 Transações filtradas para o gráfico:', filteredTransactions.length);
-    
+
     if (filteredTransactions.length === 0) {
       return [];
     }
@@ -73,17 +70,7 @@ export function CategoryPieChart() {
 
     console.log('📈 Dados do gráfico calculados:', data);
     return data;
-  }, [getFilteredTransactions, getCategoryById, specificFilter]);
-
-  const chartConfig = useMemo(() => {
-    return categoryData.reduce((config, category) => {
-      config[category.categoryId] = {
-        label: category.categoryName,
-        color: category.color
-      };
-      return config;
-    }, {} as Record<string, { label: string; color: string }>);
-  }, [categoryData]);
+  }, [transactions, getCategoryById, specificFilter]);
 
   if (categoryData.length === 0) {
     return (

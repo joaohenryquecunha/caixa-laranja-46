@@ -1,11 +1,12 @@
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency } from '@/lib/formatters';
+import type { ChartDataPoint } from '@/hooks/useSupabaseFinancialData';
 
-export function BalanceChart() {
-  const { getChartData } = useSupabaseFinancialData();
-  const chartData = getChartData();
+interface BalanceChartProps {
+  chartData: ChartDataPoint[];
+}
 
+export function BalanceChart({ chartData }: BalanceChartProps) {
   if (chartData.length === 0) {
     return (
       <div className="h-32 w-full flex items-center justify-center text-muted-foreground">
@@ -26,10 +27,10 @@ export function BalanceChart() {
           <Tooltip
             content={({ active, payload, label }) => {
               if (active && payload && payload.length) {
-                const data = payload[0].payload;
+                const data = payload[0].payload as ChartDataPoint & { tooltipDate?: string };
                 return (
                   <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                    <p className="text-sm font-medium text-foreground mb-2">{data.tooltipDate || label}</p>
+                    <p className="text-sm font-medium text-foreground mb-2">{(data as any).tooltipDate || label}</p>
                     <div className="space-y-1 text-xs">
                       <p className="text-primary">
                         Saldo: {formatCurrency(data.balance)}

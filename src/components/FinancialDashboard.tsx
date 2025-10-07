@@ -26,6 +26,7 @@ export function FinancialDashboard() {
     getFinancialSummary, 
     getRecentTransactions, 
     getFilteredTransactions,
+    getChartData,
     deleteTransaction,
     specificFilter, 
     setSpecificFilter,
@@ -33,6 +34,7 @@ export function FinancialDashboard() {
     getAvailableMonths,
     getAvailableDays,
     companies,
+    getCategoryById,
     getCompanyById,
     loading
   } = useSupabaseFinancialData();
@@ -136,7 +138,7 @@ export function FinancialDashboard() {
               </p>
             </div>
             <div className="flex-1 max-w-md">
-              <BalanceChart />
+              <BalanceChart chartData={getChartData()} />
             </div>
           </div>
         </Card>
@@ -189,7 +191,11 @@ export function FinancialDashboard() {
         {/* Layout com Gráfico e Transações lado a lado */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de Categoria */}
-          <CategoryPieChart />
+          <CategoryPieChart 
+            transactions={getFilteredTransactions()}
+            specificFilter={specificFilter}
+            getCategoryById={getCategoryById}
+          />
 
           {/* Transações */}
           <Card className="bg-gradient-card border-border shadow-card">

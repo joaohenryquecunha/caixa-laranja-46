@@ -51,9 +51,9 @@ export function FinancialDashboard() {
   
   const summary = getFinancialSummary();
   const recentTransactions = getRecentTransactions();
+  const chartData = getChartData();
+  const filteredTransactions = getFilteredTransactions();
   
-  console.log('📈 Summary calculado:', summary);
-  console.log('📋 Transações recentes:', recentTransactions.length);
   const availableYears = getAvailableYears();
   const availableMonths = getAvailableMonths();
   const availableDays = getAvailableDays();
@@ -138,7 +138,7 @@ export function FinancialDashboard() {
               </p>
             </div>
             <div className="flex-1 max-w-md">
-              <BalanceChart chartData={getChartData()} />
+              <BalanceChart chartData={chartData} />
             </div>
           </div>
         </Card>
@@ -192,7 +192,7 @@ export function FinancialDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de Categoria */}
           <CategoryPieChart 
-            transactions={getFilteredTransactions()}
+            transactions={filteredTransactions}
             specificFilter={specificFilter}
             getCategoryById={getCategoryById}
           />
@@ -217,7 +217,7 @@ export function FinancialDashboard() {
             </div>
             <div className="max-h-96 overflow-y-auto scrollbar-hide">
               <TransactionList 
-                transactions={getFilteredTransactions()} 
+                transactions={filteredTransactions} 
                 onEditTransaction={(transaction) => {
                   setSelectedTransaction(transaction);
                   setShowTransactionForm(true);

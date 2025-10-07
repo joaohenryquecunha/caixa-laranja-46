@@ -666,7 +666,9 @@ export function useSupabaseFinancialData() {
   const getFilteredTransactions = useCallback(() => {
     const now = new Date();
     
-    return transactions.filter(transaction => {
+    console.log('🔍 Filtrando transações. Total:', transactions.length, 'Filtro:', specificFilter);
+    
+    const filtered = transactions.filter(transaction => {
       const transactionDate = new Date(transaction.date);
       
       // Filter by company
@@ -705,6 +707,9 @@ export function useSupabaseFinancialData() {
           return true;
       }
     });
+    
+    console.log('✅ Transações filtradas:', filtered.length);
+    return filtered;
   }, [transactions, specificFilter]);
 
   const getFinancialSummary = useCallback((): FinancialSummary => {
@@ -774,6 +779,8 @@ export function useSupabaseFinancialData() {
   const getChartData = useCallback((): ChartDataPoint[] => {
     const filteredTransactions = getFilteredTransactions();
     
+    console.log('📊 Recalculando dados do gráfico. Transações:', filteredTransactions.length, 'Filtro:', specificFilter);
+    
     if (filteredTransactions.length === 0) {
       return [];
     }
@@ -807,7 +814,7 @@ export function useSupabaseFinancialData() {
     const sortedPeriods = Object.keys(transactionsByPeriod).sort();
     let runningBalance = 0;
     
-    return sortedPeriods.map(period => {
+    const chartData = sortedPeriods.map(period => {
       const periodData = transactionsByPeriod[period];
       runningBalance += periodData.income - periodData.expenses - periodData.investments;
       
@@ -834,6 +841,9 @@ export function useSupabaseFinancialData() {
         investments: periodData.investments,
       };
     });
+    
+    console.log('✅ Dados do gráfico calculados:', chartData.length, 'pontos');
+    return chartData;
   }, [getFilteredTransactions, specificFilter]);
 
   return {

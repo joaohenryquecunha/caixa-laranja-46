@@ -219,6 +219,8 @@ export function useSupabaseFinancialData() {
   useEffect(() => {
     if (!user) return;
 
+    console.log('🎯 Configurando real-time para goals');
+    
     const channel = supabase
       .channel(`goals-changes-${user.id}-${Date.now()}-${Math.random()}`)
       .on(
@@ -230,6 +232,8 @@ export function useSupabaseFinancialData() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log('🎯 Goal real-time event:', payload.eventType, payload);
+          
           if (payload.eventType === 'INSERT') {
             const newGoal = {
               id: payload.new.id,
@@ -243,7 +247,12 @@ export function useSupabaseFinancialData() {
               completed: payload.new.completed || false,
               completedAt: payload.new.completed_at || undefined
             };
-            setGoals(prev => [newGoal, ...prev]);
+            console.log('🎯 Adicionando nova goal ao state:', newGoal);
+            setGoals(prev => {
+              const updated = [newGoal, ...prev];
+              console.log('🎯 Goals atualizadas:', updated.length);
+              return updated;
+            });
           } else if (payload.eventType === 'UPDATE') {
             const updatedGoal = {
               id: payload.new.id,
@@ -257,10 +266,12 @@ export function useSupabaseFinancialData() {
               completed: payload.new.completed || false,
               completedAt: payload.new.completed_at || undefined
             };
+            console.log('🎯 Atualizando goal no state:', updatedGoal);
             setGoals(prev => 
               prev.map(g => g.id === updatedGoal.id ? updatedGoal : g)
             );
           } else if (payload.eventType === 'DELETE') {
+            console.log('🎯 Removendo goal do state:', payload.old.id);
             setGoals(prev => 
               prev.filter(g => g.id !== payload.old.id)
             );
@@ -276,14 +287,17 @@ export function useSupabaseFinancialData() {
 
   // Update goal progress when transactions change
   useEffect(() => {
-    if (!user || goals.length === 0) return;
+    if (!user || goals.length === 0 || transactions.length === 0) return;
+    
+    console.log('💰 Transações mudaram, atualizando progresso das metas. Total goals:', goals.length, 'Total transactions:', transactions.length);
     
     goals.forEach(goal => {
       if (!goal.completed) {
+        console.log('📊 Atualizando progresso da meta:', goal.title);
         updateGoalProgressInDB(goal.id);
       }
     });
-  }, [transactions, user]); // Not including goals to avoid loop
+  }, [transactions.length, user]); // Usando length para evitar loop
 
   const loadData = async () => {
     if (!user) return;
@@ -953,6 +967,8 @@ export function useSupabaseFinancialData() {
   const addGoal = useCallback(async (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => {
     if (!user) return '';
 
+    console.log('🎯 Criando nova meta:', goalData);
+    
     const summary = getFinancialSummary();
     
     const { data, error } = await supabase
@@ -971,7 +987,7 @@ export function useSupabaseFinancialData() {
       .single();
 
     if (error) {
-      console.error('Error adding goal:', error);
+      console.error('❌ Erro ao criar meta:', error);
       toast({
         title: "Erro",
         description: "Erro ao criar meta",
@@ -980,6 +996,24 @@ export function useSupabaseFinancialData() {
       return '';
     }
 
+    console.log('✅ Meta criada com sucesso:', data);
+    
+    // Adiciona otimisticamente ao state também (caso o real-time demore)
+    const newGoal: Goal = {
+      id: data.id,
+      title: data.title,
+      description: data.description || undefined,
+      targetAmount: Number(data.target_amount),
+      initialBalance: Number(data.initial_balance || 0),
+      currentProgress: Number(data.current_progress || 0),
+      targetDate: data.target_date,
+      createdAt: data.created_at,
+      completed: data.completed || false,
+      completedAt: data.completed_at || undefined
+    };
+    
+    setGoals(prev => [newGoal, ...prev]);
+    
     toast({
       title: "Sucesso",
       description: "Meta criada com sucesso"
@@ -1086,26 +1120,41 @@ export function useSupabaseFinancialData() {
     if (!user) return;
     
     const goal = goals.find(g => g.id === goalId);
-    if (!goal || goal.completed) return;
+    if (!goal || goal.completed) {
+      console.log('🚫 Meta não encontrada ou já concluída:', goalId);
+      return;
+    }
 
+    console.log('📊 Calculando progresso para meta:', goal.title);
+    console.log('📅 Data criação da meta:', goal.createdAt);
+    console.log('💰 Saldo inicial:', goal.initialBalance);
+    
     // Calculate transactions since goal creation
     const goalCreationDate = parseISO(goal.createdAt);
     const relevantTransactions = transactions.filter(transaction => 
       parseISO(transaction.date) >= goalCreationDate
     );
 
+    console.log('📋 Transações relevantes desde criação da meta:', relevantTransactions.length);
+
     // Calculate progress based on transactions
     let progressChange = 0;
     relevantTransactions.forEach(transaction => {
       if (transaction.type === 'income') {
         progressChange += transaction.amount;
+        console.log('  ➕ Receita:', transaction.amount, transaction.description);
       } else if (transaction.type === 'expense') {
         progressChange -= transaction.amount;
+        console.log('  ➖ Despesa:', transaction.amount, transaction.description);
       }
       // Investments don't affect goal progress
     });
 
     const newProgress = goal.initialBalance + progressChange;
+    
+    console.log('💵 Mudança de progresso:', progressChange);
+    console.log('📈 Novo progresso calculado:', newProgress);
+    console.log('🎯 Meta alvo:', goal.targetAmount);
     
     // Update in database
     const { error } = await supabase
@@ -1115,12 +1164,15 @@ export function useSupabaseFinancialData() {
       .eq('user_id', user.id);
 
     if (error) {
-      console.error('Error updating goal progress:', error);
+      console.error('❌ Erro ao atualizar progresso da meta:', error);
       return;
     }
 
+    console.log('✅ Progresso da meta atualizado no banco');
+
     // Check if goal is completed
     if (newProgress >= goal.targetAmount && !goal.completed) {
+      console.log('🎉 Meta atingida! Marcando como concluída');
       await completeGoal(goalId);
     }
   }, [user, goals, transactions, completeGoal]);

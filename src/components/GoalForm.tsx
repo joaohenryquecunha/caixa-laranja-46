@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Target, Calendar, DollarSign } from 'lucide-react';
-// removed useGoals import
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency } from '@/lib/formatters';
 import { Goal } from '@/types/goals';
@@ -14,12 +13,10 @@ import { format } from 'date-fns';
 interface GoalFormProps {
   onClose: () => void;
   editingGoal?: Goal;
-  addGoal: (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => string;
-  updateGoal: (goalId: string, updates: Partial<Goal>) => void;
 }
 
-export function GoalForm({ onClose, editingGoal, addGoal, updateGoal }: GoalFormProps) {
-  const { getFinancialSummary } = useSupabaseFinancialData();
+export function GoalForm({ onClose, editingGoal }: GoalFormProps) {
+  const { getFinancialSummary, addGoal, updateGoal } = useSupabaseFinancialData();
   const summary = getFinancialSummary();
 
   const [formData, setFormData] = useState({
@@ -29,7 +26,7 @@ export function GoalForm({ onClose, editingGoal, addGoal, updateGoal }: GoalForm
     targetDate: editingGoal?.targetDate ? format(new Date(editingGoal.targetDate), 'yyyy-MM-dd') : '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.title || !formData.targetAmount || !formData.targetDate) {
@@ -37,14 +34,14 @@ export function GoalForm({ onClose, editingGoal, addGoal, updateGoal }: GoalForm
     }
 
     if (editingGoal) {
-      updateGoal(editingGoal.id, {
+      await updateGoal(editingGoal.id, {
         title: formData.title,
         description: formData.description,
         targetAmount: formData.targetAmount,
         targetDate: new Date(formData.targetDate).toISOString(),
       });
     } else {
-      addGoal({
+      await addGoal({
         title: formData.title,
         description: formData.description,
         targetAmount: formData.targetAmount,

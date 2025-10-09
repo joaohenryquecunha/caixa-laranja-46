@@ -15,7 +15,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { Goal } from '@/types/goals';
-import { useGoals } from '@/hooks/useGoals';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { differenceInDays } from 'date-fns';
 
@@ -26,7 +26,7 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
-  const { getGoalProgress, completeGoal } = useGoals();
+  const { getGoalProgress, completeGoal } = useSupabaseFinancialData();
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('daily');
   

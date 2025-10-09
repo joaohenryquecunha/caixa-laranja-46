@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Target, Trophy, TrendingUp, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useGoals } from '@/hooks/useGoals';
+import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { GoalForm } from '@/components/GoalForm';
 import { GoalCard } from '@/components/GoalCard';
 import { Goal } from '@/types/goals';
@@ -14,7 +14,7 @@ export default function Goals() {
   const navigate = useNavigate();
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
-  const { goals, deleteGoal, getActiveGoals, getCompletedGoals, addGoal, updateGoal } = useGoals();
+  const { deleteGoal, getActiveGoals, getCompletedGoals } = useSupabaseFinancialData();
 
   const activeGoals = getActiveGoals();
   const completedGoals = getCompletedGoals();
@@ -199,8 +199,6 @@ export default function Goals() {
           <GoalForm
             onClose={handleCloseForm}
             editingGoal={editingGoal}
-            addGoal={addGoal}
-            updateGoal={updateGoal}
           />
         )}
       </div>

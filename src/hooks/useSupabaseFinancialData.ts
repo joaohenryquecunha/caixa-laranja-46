@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Transaction, Category, TransactionType, FinancialSummary, Company } from '@/types/financial';
+import { Goal, GoalProgress } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
-import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay } from 'date-fns';
+import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -82,6 +83,7 @@ export function useSupabaseFinancialData() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ 
     type: 'month',
@@ -99,6 +101,7 @@ export function useSupabaseFinancialData() {
       setTransactions([]);
       setCategories([]);
       setCompanies([]);
+      setGoals([]);
       setLoading(false);
     }
   }, [user, authLoading]);
@@ -212,6 +215,76 @@ export function useSupabaseFinancialData() {
     };
   }, [user]);
 
+  // Real-time updates for goals
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`goals-changes-${user.id}-${Date.now()}-${Math.random()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goals',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newGoal = {
+              id: payload.new.id,
+              title: payload.new.title,
+              description: payload.new.description || undefined,
+              targetAmount: Number(payload.new.target_amount),
+              initialBalance: Number(payload.new.initial_balance || 0),
+              currentProgress: Number(payload.new.current_progress || 0),
+              targetDate: payload.new.target_date,
+              createdAt: payload.new.created_at,
+              completed: payload.new.completed || false,
+              completedAt: payload.new.completed_at || undefined
+            };
+            setGoals(prev => [newGoal, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedGoal = {
+              id: payload.new.id,
+              title: payload.new.title,
+              description: payload.new.description || undefined,
+              targetAmount: Number(payload.new.target_amount),
+              initialBalance: Number(payload.new.initial_balance || 0),
+              currentProgress: Number(payload.new.current_progress || 0),
+              targetDate: payload.new.target_date,
+              createdAt: payload.new.created_at,
+              completed: payload.new.completed || false,
+              completedAt: payload.new.completed_at || undefined
+            };
+            setGoals(prev => 
+              prev.map(g => g.id === updatedGoal.id ? updatedGoal : g)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setGoals(prev => 
+              prev.filter(g => g.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Update goal progress when transactions change
+  useEffect(() => {
+    if (!user || goals.length === 0) return;
+    
+    goals.forEach(goal => {
+      if (!goal.completed) {
+        updateGoalProgressInDB(goal.id);
+      }
+    });
+  }, [transactions, user]); // Not including goals to avoid loop
+
   const loadData = async () => {
     if (!user) return;
     
@@ -220,7 +293,8 @@ export function useSupabaseFinancialData() {
       await Promise.all([
         loadCategories(),
         loadCompanies(),
-        loadTransactions()
+        loadTransactions(),
+        loadGoals()
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -332,6 +406,34 @@ export function useSupabaseFinancialData() {
       type: tx.type as TransactionType,
       date: tx.date,
       createdAt: tx.created_at
+    })));
+  };
+
+  const loadGoals = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading goals:', error);
+      return;
+    }
+
+    setGoals(data.map(goal => ({
+      id: goal.id,
+      title: goal.title,
+      description: goal.description || undefined,
+      targetAmount: Number(goal.target_amount),
+      initialBalance: Number(goal.initial_balance || 0),
+      currentProgress: Number(goal.current_progress || 0),
+      targetDate: goal.target_date,
+      createdAt: goal.created_at,
+      completed: goal.completed || false,
+      completedAt: goal.completed_at || undefined
     })));
   };
 
@@ -846,10 +948,219 @@ export function useSupabaseFinancialData() {
     return chartData;
   }, [getFilteredTransactions, specificFilter]);
 
+  // ============ GOALS FUNCTIONS ============
+  
+  const addGoal = useCallback(async (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => {
+    if (!user) return '';
+
+    const summary = getFinancialSummary();
+    
+    const { data, error } = await supabase
+      .from('goals')
+      .insert({
+        user_id: user.id,
+        title: goalData.title,
+        description: goalData.description || null,
+        target_amount: goalData.targetAmount,
+        initial_balance: goalData.initialBalance,
+        current_progress: summary.totalBalance,
+        target_date: goalData.targetDate,
+        completed: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding goal:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar meta",
+        variant: "destructive"
+      });
+      return '';
+    }
+
+    toast({
+      title: "Sucesso",
+      description: "Meta criada com sucesso"
+    });
+    
+    return data.id;
+  }, [user, toast, getFinancialSummary]);
+
+  const updateGoal = useCallback(async (goalId: string, updates: Partial<Goal>) => {
+    if (!user) return;
+
+    const updateData: any = {};
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.targetAmount !== undefined) updateData.target_amount = updates.targetAmount;
+    if (updates.targetDate !== undefined) updateData.target_date = updates.targetDate;
+    if (updates.completed !== undefined) updateData.completed = updates.completed;
+    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt;
+    if (updates.currentProgress !== undefined) updateData.current_progress = updates.currentProgress;
+
+    const { error } = await supabase
+      .from('goals')
+      .update(updateData)
+      .eq('id', goalId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating goal:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar meta",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Sucesso",
+      description: "Meta atualizada com sucesso"
+    });
+  }, [user, toast]);
+
+  const deleteGoal = useCallback(async (goalId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', goalId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error deleting goal:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir meta",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Also delete goal history
+    await supabase
+      .from('goal_history')
+      .delete()
+      .eq('goal_id', goalId)
+      .eq('user_id', user.id);
+
+    toast({
+      title: "Sucesso",
+      description: "Meta excluída com sucesso"
+    });
+  }, [user, toast]);
+
+  const completeGoal = useCallback(async (goalId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('goals')
+      .update({
+        completed: true,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', goalId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error completing goal:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao completar meta",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Parabéns!",
+      description: "Meta concluída com sucesso! 🎉"
+    });
+  }, [user, toast]);
+
+  const updateGoalProgressInDB = useCallback(async (goalId: string) => {
+    if (!user) return;
+    
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal || goal.completed) return;
+
+    // Calculate transactions since goal creation
+    const goalCreationDate = parseISO(goal.createdAt);
+    const relevantTransactions = transactions.filter(transaction => 
+      parseISO(transaction.date) >= goalCreationDate
+    );
+
+    // Calculate progress based on transactions
+    let progressChange = 0;
+    relevantTransactions.forEach(transaction => {
+      if (transaction.type === 'income') {
+        progressChange += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        progressChange -= transaction.amount;
+      }
+      // Investments don't affect goal progress
+    });
+
+    const newProgress = goal.initialBalance + progressChange;
+    
+    // Update in database
+    const { error } = await supabase
+      .from('goals')
+      .update({ current_progress: newProgress })
+      .eq('id', goalId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating goal progress:', error);
+      return;
+    }
+
+    // Check if goal is completed
+    if (newProgress >= goal.targetAmount && !goal.completed) {
+      await completeGoal(goalId);
+    }
+  }, [user, goals, transactions, completeGoal]);
+
+  const getGoalProgress = useCallback((goal: Goal): GoalProgress => {
+    const remainingAmount = Math.max(0, goal.targetAmount - goal.currentProgress);
+    const remainingDays = Math.max(0, differenceInDays(parseISO(goal.targetDate), new Date()));
+    const dailyTarget = remainingDays > 0 ? remainingAmount / remainingDays : 0;
+    const monthlyTarget = dailyTarget * 30;
+    const progressPercentage = (goal.currentProgress / goal.targetAmount) * 100;
+    
+    // Calculate if on track
+    const totalDays = differenceInDays(parseISO(goal.targetDate), parseISO(goal.createdAt));
+    const daysPassed = totalDays - remainingDays;
+    const expectedProgress = (daysPassed / totalDays) * goal.targetAmount;
+    const isOnTrack = goal.currentProgress >= expectedProgress * 0.9; // 90% tolerance
+
+    return {
+      remainingAmount,
+      remainingDays,
+      dailyTarget,
+      monthlyTarget,
+      progressPercentage: Math.min(100, progressPercentage),
+      isOnTrack
+    };
+  }, []);
+
+  const getActiveGoals = useCallback(() => {
+    return goals.filter(goal => !goal.completed);
+  }, [goals]);
+
+  const getCompletedGoals = useCallback(() => {
+    return goals.filter(goal => goal.completed);
+  }, [goals]);
+
   return {
     transactions,
     categories,
     companies,
+    goals,
     loading: loading || authLoading,
     specificFilter,
     setSpecificFilter,
@@ -871,6 +1182,14 @@ export function useSupabaseFinancialData() {
     getAvailableYears,
     getAvailableMonths,
     getAvailableDays,
-    getChartData
+    getChartData,
+    // Goals
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    completeGoal,
+    getGoalProgress,
+    getActiveGoals,
+    getCompletedGoals
   };
 }

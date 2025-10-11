@@ -267,9 +267,12 @@ export function useSupabaseFinancialData() {
               completedAt: payload.new.completed_at || undefined
             };
             console.log('🎯 Atualizando goal no state:', updatedGoal);
-            setGoals(prev => 
-              prev.map(g => g.id === updatedGoal.id ? updatedGoal : g)
-            );
+            console.log('🎯 Status completed:', updatedGoal.completed, 'completedAt:', updatedGoal.completedAt);
+            setGoals(prev => {
+              const updated = prev.map(g => g.id === updatedGoal.id ? updatedGoal : g);
+              console.log('🎯 Goals após UPDATE:', updated.map(g => ({ id: g.id, title: g.title, completed: g.completed })));
+              return updated;
+            });
           } else if (payload.eventType === 'DELETE') {
             console.log('🎯 Removendo goal do state:', payload.old.id);
             setGoals(prev => 
@@ -1198,11 +1201,15 @@ export function useSupabaseFinancialData() {
   }, []);
 
   const getActiveGoals = useCallback(() => {
-    return goals.filter(goal => !goal.completed);
+    const active = goals.filter(goal => !goal.completed);
+    console.log('🎯 getActiveGoals - Total goals:', goals.length, 'Active:', active.length);
+    return active;
   }, [goals]);
 
   const getCompletedGoals = useCallback(() => {
-    return goals.filter(goal => goal.completed);
+    const completed = goals.filter(goal => goal.completed);
+    console.log('🏆 getCompletedGoals - Total goals:', goals.length, 'Completed:', completed.length);
+    return completed;
   }, [goals]);
 
   return {

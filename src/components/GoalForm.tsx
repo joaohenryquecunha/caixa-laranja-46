@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Target, Calendar, DollarSign } from 'lucide-react';
-import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
+
 import { formatCurrency } from '@/lib/formatters';
 import { Goal } from '@/types/goals';
 import { format } from 'date-fns';
@@ -13,12 +13,12 @@ import { format } from 'date-fns';
 interface GoalFormProps {
   onClose: () => void;
   editingGoal?: Goal;
+  onAddGoal?: (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => Promise<string | void>;
+  onUpdateGoal?: (goalId: string, updates: Partial<Goal>) => Promise<void>;
+  currentBalance?: number;
 }
 
-export function GoalForm({ onClose, editingGoal }: GoalFormProps) {
-  const { getFinancialSummary, addGoal, updateGoal } = useSupabaseFinancialData();
-  const summary = getFinancialSummary();
-
+export function GoalForm({ onClose, editingGoal, onAddGoal, onUpdateGoal, currentBalance }: GoalFormProps) {
   const [formData, setFormData] = useState({
     title: editingGoal?.title || '',
     description: editingGoal?.description || '',
@@ -34,20 +34,20 @@ export function GoalForm({ onClose, editingGoal }: GoalFormProps) {
     }
 
     if (editingGoal) {
-      await updateGoal(editingGoal.id, {
+      await onUpdateGoal?.(editingGoal.id, {
         title: formData.title,
         description: formData.description,
         targetAmount: formData.targetAmount,
         targetDate: new Date(formData.targetDate).toISOString(),
       });
     } else {
-      await addGoal({
+      await onAddGoal?.({
         title: formData.title,
         description: formData.description,
         targetAmount: formData.targetAmount,
         targetDate: new Date(formData.targetDate).toISOString(),
-        initialBalance: summary.totalBalance,
-      });
+        initialBalance: currentBalance ?? 0,
+      } as any);
     }
 
     onClose();
@@ -133,7 +133,7 @@ export function GoalForm({ onClose, editingGoal }: GoalFormProps) {
             {!editingGoal && (
               <div className="bg-muted/50 p-3 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Saldo atual:</strong> {formatCurrency(summary.totalBalance)}
+                  <strong>Saldo atual:</strong> {formatCurrency(currentBalance ?? 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Esta meta começará com seu saldo atual e será atualizada conforme suas transações.

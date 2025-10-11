@@ -1127,10 +1127,10 @@ export function useSupabaseFinancialData() {
     console.log('📅 Data criação da meta:', goal.createdAt);
     console.log('💰 Saldo inicial:', goal.initialBalance);
     
-    // Calculate transactions since goal creation
+    // Calculate transactions since goal creation (by creation timestamp, not financial date)
     const goalCreationDate = parseISO(goal.createdAt);
     const relevantTransactions = transactions.filter(transaction => 
-      parseISO(transaction.date) >= goalCreationDate
+      parseISO(transaction.createdAt) >= goalCreationDate
     );
 
     console.log('📋 Transações relevantes desde criação da meta:', relevantTransactions.length);

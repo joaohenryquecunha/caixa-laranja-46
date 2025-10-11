@@ -287,7 +287,7 @@ export function useSupabaseFinancialData() {
 
   // Update goal progress when transactions change
   useEffect(() => {
-    if (!user || goals.length === 0 || transactions.length === 0) return;
+    if (!user || goals.length === 0) return;
     
     console.log('💰 Transações mudaram, atualizando progresso das metas. Total goals:', goals.length, 'Total transactions:', transactions.length);
     
@@ -297,7 +297,7 @@ export function useSupabaseFinancialData() {
         updateGoalProgressInDB(goal.id);
       }
     });
-  }, [transactions.length, user]); // Usando length para evitar loop
+  }, [transactions, goals.length, user]);
 
   const loadData = async () => {
     if (!user) return;
@@ -969,8 +969,6 @@ export function useSupabaseFinancialData() {
 
     console.log('🎯 Criando nova meta:', goalData);
     
-    const summary = getFinancialSummary();
-    
     const { data, error } = await supabase
       .from('goals')
       .insert({
@@ -979,7 +977,7 @@ export function useSupabaseFinancialData() {
         description: goalData.description || null,
         target_amount: goalData.targetAmount,
         initial_balance: goalData.initialBalance,
-        current_progress: summary.totalBalance,
+        current_progress: goalData.initialBalance,
         target_date: goalData.targetDate,
         completed: false
       })
@@ -1020,7 +1018,7 @@ export function useSupabaseFinancialData() {
     });
     
     return data.id;
-  }, [user, toast, getFinancialSummary]);
+  }, [user, toast]);
 
   const updateGoal = useCallback(async (goalId: string, updates: Partial<Goal>) => {
     if (!user) return;
@@ -1143,11 +1141,10 @@ export function useSupabaseFinancialData() {
       if (transaction.type === 'income') {
         progressChange += transaction.amount;
         console.log('  ➕ Receita:', transaction.amount, transaction.description);
-      } else if (transaction.type === 'expense') {
+      } else if (transaction.type === 'expense' || transaction.type === 'investment') {
         progressChange -= transaction.amount;
-        console.log('  ➖ Despesa:', transaction.amount, transaction.description);
+        console.log('  ➖ Saída (despesa/investimento):', transaction.amount, transaction.description);
       }
-      // Investments don't affect goal progress
     });
 
     const newProgress = goal.initialBalance + progressChange;

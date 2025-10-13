@@ -52,7 +52,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">
-            Entrar no Finance Dashboard
+            Entrar no Uzzi Finance
           </CardTitle>
           <CardDescription className="text-center">
             Use sua conta Google para acessar

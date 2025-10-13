@@ -1,21 +1,42 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinancialDashboard } from '@/components/FinancialDashboard';
+import { SubscriptionBanner } from '@/components/SubscriptionBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
+    
+    if (user) {
+      checkAdminStatus();
+    }
   }, [user, loading, navigate]);
+
+  const checkAdminStatus = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    setIsAdmin(!!data);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -56,6 +77,12 @@ const Index = () => {
               <User className="h-4 w-4" />
               {user.user_metadata?.full_name || user.email}
             </div>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
+                <Shield className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sair
@@ -64,6 +91,9 @@ const Index = () => {
         </div>
       </header>
       <main>
+        <div className="container mx-auto px-4 py-6">
+          <SubscriptionBanner />
+        </div>
         <FinancialDashboard />
       </main>
     </div>

@@ -14,12 +14,6 @@ interface CategoryManagerProps {
   onClose: () => void;
 }
 
-const AVAILABLE_ICONS = [
-  'Wallet', 'Briefcase', 'UtensilsCrossed', 'Car', 'TrendingUp', 'Bitcoin',
-  'Home', 'Heart', 'ShoppingBag', 'Gamepad2', 'Plane', 'GraduationCap',
-  'Stethoscope', 'Dumbbell', 'Coffee', 'Gift', 'Shirt', 'Fuel'
-];
-
 const TYPE_LABELS = {
   [TransactionType.INCOME]: 'Receita',
   [TransactionType.EXPENSE]: 'Despesa',
@@ -33,7 +27,6 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   const [formData, setFormData] = useState({
     name: '',
     color: '#22c55e',
-    icon: AVAILABLE_ICONS[0],
     type: '' as TransactionType
   });
 
@@ -42,7 +35,6 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     setFormData({
       name: category.name,
       color: category.color,
-      icon: category.icon,
       type: category.type
     });
     setShowAddForm(true);
@@ -53,7 +45,6 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     setFormData({
       name: '',
       color: '#22c55e',
-      icon: AVAILABLE_ICONS[0],
       type: '' as TransactionType
     });
     setShowAddForm(false);
@@ -86,7 +77,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       updateCategory(editingCategory, {
         name: formData.name,
         color: formData.color,
-        icon: formData.icon,
+        icon: '',
         type: formData.type
       });
 
@@ -98,7 +89,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       addCategory({
         name: formData.name,
         color: formData.color,
-        icon: formData.icon,
+        icon: '',
         type: formData.type
       });
 
@@ -208,31 +199,12 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <ColorPicker
                         value={formData.color}
                         onChange={(color) => setFormData(prev => ({ ...prev, color }))}
                         label="Cor"
                       />
-                      
-                      <div className="space-y-2">
-                        <Label>Ícone</Label>
-                        <Select
-                          value={formData.icon}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, icon: value }))}
-                        >
-                          <SelectTrigger className="bg-input border-border">
-                            <SelectValue placeholder="Selecione um ícone" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border">
-                            {AVAILABLE_ICONS.map(icon => (
-                              <SelectItem key={icon} value={icon}>
-                                {icon}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
 
                     <div className="flex gap-2">
@@ -293,9 +265,11 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                                   <p className="font-medium text-foreground truncate">
                                     {category.name}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {category.icon} {isInUse && '• Em uso'}
-                                  </p>
+                                  {isInUse && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Em uso
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">

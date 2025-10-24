@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -8,15 +8,29 @@ import { TransactionForm } from '@/components/TransactionForm';
 import { TransactionList } from '@/components/TransactionList';
 import { BalanceChart } from '@/components/BalanceChart';
 import { AllTransactions } from '@/components/AllTransactions';
-import { TestRecurringButton } from '@/components/TestRecurringButton';
 import { PeriodFilter } from '@/components/PeriodFilter';
 import { CategoryManager } from '@/components/CategoryManager';
 import { CompanyManager } from '@/components/CompanyManager';
 import { CategoryPieChart } from '@/components/CategoryPieChart';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { formatCurrency } from '@/lib/formatters';
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/scroll-lock';
 
-export function FinancialDashboard() {
+interface FinancialDashboardProps {
+  onManageSubscription?: () => void;
+  showManageSubscription?: boolean;
+  isAdmin?: boolean;
+  onAdmin?: () => void;
+  onSignOut?: () => void;
+}
+
+export function FinancialDashboard({
+  onManageSubscription,
+  showManageSubscription,
+  isAdmin,
+  onAdmin,
+  onSignOut,
+}: FinancialDashboardProps = {}) {
   const navigate = useNavigate();
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
@@ -41,6 +55,26 @@ export function FinancialDashboard() {
   
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
+  const modalOpen = showTransactionForm || showAllTransactions || showCategoryManager || showCompanyManager;
+
+  const handleAdminNavigate = () => {
+    if (onAdmin) {
+      onAdmin();
+    } else {
+      navigate('/admin');
+    }
+  };
+
+  useEffect(() => {
+    if (!modalOpen) {
+      return;
+    }
+    lockBodyScroll();
+    return () => {
+      unlockBodyScroll();
+    };
+  }, [modalOpen]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -59,11 +93,11 @@ export function FinancialDashboard() {
   const availableDays = getAvailableDays();
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 pb-24 md:p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
+          <div className="space-y-1">
             <h1 className="text-2xl font-bold text-foreground">
               Sua Carteira
             </h1>
@@ -71,15 +105,17 @@ export function FinancialDashboard() {
               Gerencie suas finanças
             </p>
           </div>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <PeriodFilter 
-              specificFilter={specificFilter}
-              onFilterChange={setSpecificFilter}
-              availableYears={availableYears}
-              availableMonths={availableMonths}
-              availableDays={availableDays}
-              getAvailableMonthsForYear={getAvailableMonths}
-            />
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full md:w-auto">
+            <div className="w-full md:w-auto">
+              <PeriodFilter 
+                specificFilter={specificFilter}
+                onFilterChange={setSpecificFilter}
+                availableYears={availableYears}
+                availableMonths={availableMonths}
+                availableDays={availableDays}
+                getAvailableMonthsForYear={getAvailableMonths}
+              />
+            </div>
             {/* Botões visíveis apenas no desktop */}
             <div className="hidden md:flex gap-2">
               <Button
@@ -137,16 +173,16 @@ export function FinancialDashboard() {
                 }
               </p>
             </div>
-            <div className="flex-1 max-w-md">
+            <div className="flex-1 md:max-w-md">
               <BalanceChart chartData={chartData} />
             </div>
           </div>
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <Card className="bg-gradient-card border-border shadow-card p-6">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 bg-success/20 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-success" />
               </div>
@@ -160,7 +196,7 @@ export function FinancialDashboard() {
           </Card>
 
           <Card className="bg-gradient-card border-border shadow-card p-6">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 bg-destructive/20 rounded-lg">
                 <TrendingDown className="h-5 w-5 text-destructive" />
               </div>
@@ -174,7 +210,7 @@ export function FinancialDashboard() {
           </Card>
 
           <Card className="bg-gradient-card border-border shadow-card p-6">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <DollarSign className="h-5 w-5 text-blue-500" />
               </div>
@@ -252,14 +288,16 @@ export function FinancialDashboard() {
           <CompanyManager onClose={() => setShowCompanyManager(false)} />
         )}
 
-        {/* Test buttons for development */}
-        <TestRecurringButton />
-
         {/* Floating Action Button para Mobile */}
         <FloatingActionButton
           onNewTransaction={() => setShowTransactionForm(true)}
           onCategoryManager={() => setShowCategoryManager(true)}
           onCompanyManager={() => setShowCompanyManager(true)}
+          showManageSubscription={showManageSubscription}
+          onManageSubscription={onManageSubscription}
+          isAdmin={isAdmin}
+          onAdmin={isAdmin ? handleAdminNavigate : undefined}
+          onSignOut={onSignOut}
         />
       </div>
     </div>

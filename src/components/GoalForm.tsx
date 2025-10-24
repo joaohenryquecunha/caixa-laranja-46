@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 interface GoalFormProps {
   onClose: () => void;
   editingGoal?: Goal;
-  onAddGoal?: (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => Promise<string | void>;
+  onAddGoal?: (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed' | 'completedAt'>) => Promise<string | void>;
   onUpdateGoal?: (goalId: string, updates: Partial<Goal>) => Promise<void>;
   currentBalance?: number;
 }
@@ -25,6 +25,7 @@ export function GoalForm({ onClose, editingGoal, onAddGoal, onUpdateGoal, curren
     targetAmount: editingGoal?.targetAmount || 0,
     targetDate: editingGoal?.targetDate ? format(new Date(editingGoal.targetDate), 'yyyy-MM-dd') : '',
   });
+  const [mode, setMode] = useState<'automatic' | 'manual'>(editingGoal?.mode || 'automatic');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +40,7 @@ export function GoalForm({ onClose, editingGoal, onAddGoal, onUpdateGoal, curren
         description: formData.description,
         targetAmount: formData.targetAmount,
         targetDate: new Date(formData.targetDate).toISOString(),
+        mode,
       });
     } else {
       await onAddGoal?.({
@@ -46,7 +48,8 @@ export function GoalForm({ onClose, editingGoal, onAddGoal, onUpdateGoal, curren
         description: formData.description,
         targetAmount: formData.targetAmount,
         targetDate: new Date(formData.targetDate).toISOString(),
-        initialBalance: currentBalance ?? 0,
+        initialBalance: mode === 'automatic' ? currentBalance ?? 0 : 0,
+        mode,
       } as any);
     }
 
@@ -75,6 +78,31 @@ export function GoalForm({ onClose, editingGoal, onAddGoal, onUpdateGoal, curren
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={mode === 'automatic' ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => setMode('automatic')}
+              >
+                Automático
+              </Button>
+              <Button
+                type="button"
+                variant={mode === 'manual' ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => setMode('manual')}
+              >
+                Manual
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {mode === 'automatic'
+                ? 'O progresso desta meta será calculado automaticamente a partir das suas transações.'
+                : 'No modo manual, use o botão "Inserir saldo" na meta para registrar novos aportes.'}
+            </p>
+
             <div>
               <Label htmlFor="title">Título da Meta</Label>
               <Input
@@ -130,13 +158,24 @@ export function GoalForm({ onClose, editingGoal, onAddGoal, onUpdateGoal, curren
               </div>
             </div>
 
-            {!editingGoal && (
+            {!editingGoal && mode === 'automatic' && (
               <div className="bg-muted/50 p-3 rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   <strong>Saldo atual:</strong> {formatCurrency(currentBalance ?? 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Esta meta começará com seu saldo atual e será atualizada conforme suas transações.
+                </p>
+              </div>
+            )}
+
+            {!editingGoal && mode === 'manual' && (
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Modo manual:</strong> utilize o botão "Inserir saldo" na meta para registrar aportes.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cada aporte criará automaticamente uma despesa na categoria Meta.
                 </p>
               </div>
             )}

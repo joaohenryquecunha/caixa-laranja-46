@@ -1,20 +1,30 @@
 import { useState, useEffect } from 'react';
-import { Plus, Settings, Building2, Menu, X, Target } from 'lucide-react';
+import { Plus, Settings, Building2, Menu, X, Target, Crown, Shield, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/scroll-lock';
 
 interface FloatingActionButtonProps {
   onNewTransaction: () => void;
   onCategoryManager: () => void;
   onCompanyManager: () => void;
+  onManageSubscription?: () => void;
+  showManageSubscription?: boolean;
+  isAdmin?: boolean;
+  onAdmin?: () => void;
+  onSignOut?: () => void;
 }
 
 export function FloatingActionButton({ 
   onNewTransaction, 
   onCategoryManager, 
-  onCompanyManager 
+  onCompanyManager,
+  onManageSubscription,
+  showManageSubscription,
+  isAdmin,
+  onAdmin,
+  onSignOut,
 }: FloatingActionButtonProps) {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -30,14 +40,10 @@ export function FloatingActionButton({
 
   // Prevent body scroll when menu is open
   useEffect(() => {
-    if (isMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
+    if (!isMenuOpen) return;
+    lockBodyScroll();
     return () => {
-      document.body.style.overflow = '';
+      unlockBodyScroll();
     };
   }, [isMenuOpen]);
 
@@ -93,6 +99,39 @@ export function FloatingActionButton({
                     <div className="text-sm text-muted-foreground">Gerenciar metas financeiras</div>
                   </div>
                 </Button>
+                {showManageSubscription && onManageSubscription && (
+                  <Button
+                    onClick={() => handleAction(onManageSubscription)}
+                    variant="ghost"
+                    size="lg"
+                    className="w-full justify-start h-16 text-left bg-card/50 hover:bg-card/80 border border-border/50"
+                  >
+                    <div className="p-3 bg-primary/20 rounded-lg mr-4">
+                      <Crown className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Gerenciar assinatura</div>
+                      <div className="text-sm text-muted-foreground">Acessar portal da Stripe</div>
+                    </div>
+                  </Button>
+                )}
+
+                {isAdmin && onAdmin && (
+                  <Button
+                    onClick={() => handleAction(onAdmin)}
+                    variant="ghost"
+                    size="lg"
+                    className="w-full justify-start h-16 text-left bg-card/50 hover:bg-card/80 border border-border/50"
+                  >
+                    <div className="p-3 bg-primary/20 rounded-lg mr-4">
+                      <Shield className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Painel Admin</div>
+                      <div className="text-sm text-muted-foreground">Gerenciar usuários e assinaturas</div>
+                    </div>
+                  </Button>
+                )}
                 
                 <Button
                   onClick={() => handleAction(onCategoryManager)}
@@ -124,6 +163,19 @@ export function FloatingActionButton({
                   </div>
                 </Button>
               </div>
+              {onSignOut && (
+                <div className="mt-auto pb-8 pt-6">
+                  <Button
+                    onClick={() => handleAction(onSignOut)}
+                    variant="outline"
+                    size="lg"
+                    className="w-full justify-center h-12"
+                  >
+                    <LogOut className="h-5 w-5 mr-2" />
+                    Sair
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

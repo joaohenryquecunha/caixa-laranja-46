@@ -120,8 +120,6 @@ export function useSampleData() {
       localStorage.setItem('financial_transactions', JSON.stringify(sampleTransactions));
       localStorage.setItem(SAMPLE_DATA_KEY, 'true');
       
-      console.log(`✅ Dados de exemplo criados: ${sampleTransactions.length} transações`);
-      console.log('📊 Incluindo transações recorrentes de salário, aluguel, investimentos e serviços');
     }
   }, []);
 }

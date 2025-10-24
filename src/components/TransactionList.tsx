@@ -67,16 +67,16 @@ export function TransactionList({
         return (
           <div
             key={transaction.id}
-            className="flex items-center justify-between p-4 rounded-lg border border-border transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-fade-in"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-border transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-fade-in"
             style={{ 
               backgroundColor: `${category?.color}08`,
               borderColor: `${category?.color}20`,
               animationDelay: `${index * 50}ms`
             }}
           >
-            <div className="flex items-center space-x-3">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
               <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 hover:scale-110"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 transition-all duration-300 hover:scale-110"
                 style={{ 
                   backgroundColor: `${category?.color}20`,
                   color: category?.color 
@@ -84,8 +84,8 @@ export function TransactionList({
               >
                 {category?.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <p className="font-medium text-foreground transition-colors duration-200">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground transition-colors duration-200 break-words leading-tight">
                   {transaction.description || category?.name}
                 </p>
                 <p className="text-sm text-muted-foreground transition-colors duration-200">
@@ -94,8 +94,8 @@ export function TransactionList({
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <p className={`font-semibold transition-all duration-300 ${colorClass}`}>
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              <p className={`font-semibold transition-all duration-300 ${colorClass} text-right sm:text-right`}> 
                 {sign}{formatCurrency(transaction.amount)}
               </p>
               

@@ -31,43 +31,22 @@ const DEFAULT_CATEGORIES: Category[] = [
     name: 'Salário',
     color: '#22c55e',
     icon: 'Wallet',
-    type: TransactionType.INCOME
+    type: TransactionType.INCOME,
   },
   {
-    id: '2', 
-    name: 'Freelance',
-    color: '#3b82f6',
-    icon: 'Briefcase',
-    type: TransactionType.INCOME
-  },
-  {
-    id: '3',
+    id: '2',
     name: 'Alimentação',
     color: '#ef4444',
     icon: 'UtensilsCrossed',
-    type: TransactionType.EXPENSE
+    type: TransactionType.EXPENSE,
   },
   {
-    id: '4',
-    name: 'Transporte',
-    color: '#f59e0b',
-    icon: 'Car',
-    type: TransactionType.EXPENSE
-  },
-  {
-    id: '5',
+    id: '3',
     name: 'Ações',
     color: '#8b5cf6',
     icon: 'TrendingUp',
-    type: TransactionType.INVESTMENT
+    type: TransactionType.INVESTMENT,
   },
-  {
-    id: '6',
-    name: 'Criptomoedas',
-    color: '#06b6d4',
-    icon: 'Bitcoin',
-    type: TransactionType.INVESTMENT
-  }
 ];
 
 // Singleton para garantir que os dados sejam compartilhados
@@ -82,7 +61,6 @@ const loadInitialData = () => {
     if (savedTransactions) {
       try {
         globalTransactions = JSON.parse(savedTransactions);
-        console.log('📁 Transações carregadas do cache:', globalTransactions.length);
       } catch (e) {
         console.error('❌ Erro ao carregar transações:', e);
         globalTransactions = [];
@@ -92,10 +70,9 @@ const loadInitialData = () => {
 
   const savedCategories = localStorage.getItem(CATEGORIES_KEY);
   if (savedCategories) {
-    try {
-      globalCategories = JSON.parse(savedCategories);
-      console.log('📁 Categorias carregadas do cache:', globalCategories.length);
-    } catch (e) {
+      try {
+        globalCategories = JSON.parse(savedCategories);
+      } catch (e) {
       console.error('❌ Erro ao carregar categorias:', e);
       globalCategories = DEFAULT_CATEGORIES;
     }
@@ -103,10 +80,9 @@ const loadInitialData = () => {
 
   const savedCompanies = localStorage.getItem(COMPANIES_KEY);
   if (savedCompanies) {
-    try {
-      globalCompanies = JSON.parse(savedCompanies);
-      console.log('📁 Empresas carregadas do cache:', globalCompanies.length);
-    } catch (e) {
+      try {
+        globalCompanies = JSON.parse(savedCompanies);
+      } catch (e) {
       console.error('❌ Erro ao carregar empresas:', e);
       globalCompanies = [];
     }
@@ -131,7 +107,6 @@ export function useFinancialData() {
   useEffect(() => {
     if (JSON.stringify(transactions) !== JSON.stringify(globalTransactions)) {
       globalTransactions = [...transactions];
-      console.log('💾 Salvando', transactions.length, 'transações no localStorage');
       localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
     }
   }, [transactions]);
@@ -139,7 +114,6 @@ export function useFinancialData() {
   // Atualizar estado local quando dados globais mudarem
   useEffect(() => {
     if (JSON.stringify(transactions) !== JSON.stringify(globalTransactions)) {
-      console.log('🔄 Atualizando estado local com', globalTransactions.length, 'transações');
       setTransactions([...globalTransactions]);
     }
   }, [globalTransactions]);
@@ -170,13 +144,6 @@ export function useFinancialData() {
     const newTransactions: Transaction[] = [];
     const startDate = new Date(data.startDate);
     
-    console.log('🔄 Criando transações recorrentes:', {
-      description: data.description,
-      amount: data.amount,
-      times: data.times,
-      startDate: data.startDate
-    });
-    
     for (let i = 0; i < data.times; i++) {
       // Adiciona i meses à data inicial usando addMonths do date-fns
       const currentDate = addMonths(startDate, i);
@@ -198,10 +165,7 @@ export function useFinancialData() {
       };
       
       newTransactions.push(newTransaction);
-      console.log(`📅 Transação ${i + 1}: ${transactionDate} - ${data.description} - R$ ${data.amount}`);
     }
-    
-    console.log(`✅ Criadas ${newTransactions.length} transações recorrentes!`);
     
     const updatedTransactions = [...newTransactions, ...globalTransactions];
     globalTransactions = updatedTransactions;
@@ -214,22 +178,14 @@ export function useFinancialData() {
       id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString()
     };
-    console.log('💰 Adicionando nova transação:', newTransaction);
-    
     const updatedTransactions = [newTransaction, ...globalTransactions];
     globalTransactions = updatedTransactions;
     setTransactions(updatedTransactions);
     
-    console.log('📊 Total de transações após adicionar:', updatedTransactions.length);
   }, []);
 
   const deleteTransaction = useCallback((id: string) => {
-    console.log('🗑️ Removendo transação:', id);
-    setTransactions(prev => {
-      const updated = prev.filter(t => t.id !== id);
-      console.log('📊 Total de transações após remover:', updated.length);
-      return updated;
-    });
+    setTransactions(prev => prev.filter(t => t.id !== id));
   }, []);
 
   const addCategory = useCallback((category: Omit<Category, 'id'>) => {
@@ -244,7 +200,6 @@ export function useFinancialData() {
     setCategories(prev => prev.map(cat => 
       cat.id === id ? { ...updatedCategory, id } : cat
     ));
-    console.log('✏️ Categoria atualizada:', id, updatedCategory);
   }, []);
 
   const deleteCategory = useCallback((id: string) => {
@@ -252,12 +207,10 @@ export function useFinancialData() {
     const isInUse = globalTransactions.some(transaction => transaction.categoryId === id);
     
     if (isInUse) {
-      console.log('❌ Não é possível deletar categoria em uso:', id);
       return { success: false, message: 'Esta categoria está sendo usada em transações e não pode ser excluída.' };
     }
     
     setCategories(prev => prev.filter(cat => cat.id !== id));
-    console.log('🗑️ Categoria deletada:', id);
     return { success: true, message: 'Categoria excluída com sucesso.' };
   }, []);
 
@@ -272,14 +225,12 @@ export function useFinancialData() {
       id: `company-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     };
     setCompanies(prev => [...prev, newCompany]);
-    console.log('🏢 Empresa adicionada:', newCompany);
   }, []);
 
   const updateCompany = useCallback((id: string, updatedCompany: Omit<Company, 'id'>) => {
     setCompanies(prev => prev.map(company => 
       company.id === id ? { ...updatedCompany, id } : company
     ));
-    console.log('✏️ Empresa atualizada:', id, updatedCompany);
     return { success: true, message: 'Empresa atualizada com sucesso.' };
   }, []);
 
@@ -288,12 +239,10 @@ export function useFinancialData() {
     const isInUse = globalTransactions.some(transaction => transaction.companyId === id);
     
     if (isInUse) {
-      console.log('❌ Não é possível deletar empresa em uso:', id);
       return { success: false, message: 'Esta empresa está sendo usada em transações e não pode ser excluída.' };
     }
     
     setCompanies(prev => prev.filter(company => company.id !== id));
-    console.log('🗑️ Empresa deletada:', id);
     return { success: true, message: 'Empresa excluída com sucesso.' };
   }, []);
 
@@ -304,7 +253,6 @@ export function useFinancialData() {
   const getFilteredTransactions = useCallback(() => {
     const now = new Date();
     
-    console.log('🔍 Filtrando transações. Total:', transactions.length, 'Filtro:', specificFilter);
     
     const filtered = transactions.filter(transaction => {
       const transactionDate = new Date(transaction.date);
@@ -346,8 +294,6 @@ export function useFinancialData() {
       }
     });
     
-    console.log('✅ Transações filtradas:', filtered.length);
-    console.log('📅 Transações por data:', filtered.map(t => ({ date: t.date, description: t.description })));
     return filtered;
   }, [transactions, specificFilter]);
 
@@ -375,7 +321,6 @@ export function useFinancialData() {
       totalInvestments
     };
 
-    console.log('📈 Summary calculado:', summary);
     return summary;
   }, [getFilteredTransactions]);
 
@@ -385,7 +330,6 @@ export function useFinancialData() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, limit);
     
-    console.log('📋 Transações recentes:', recent.length);
     return recent;
   }, [getFilteredTransactions]);
 
@@ -396,7 +340,6 @@ export function useFinancialData() {
   const getAvailableYears = useCallback(() => {
     const years = transactions.map(t => new Date(t.date).getFullYear());
     const uniqueYears = Array.from(new Set(years)).sort((a, b) => b - a);
-    console.log('📅 Anos disponíveis:', uniqueYears);
     return uniqueYears;
   }, [transactions]);
 
@@ -406,7 +349,6 @@ export function useFinancialData() {
       .filter(t => new Date(t.date).getFullYear() === targetYear)
       .map(t => new Date(t.date).getMonth());
     const uniqueMonths = Array.from(new Set(months)).sort((a, b) => a - b);
-    console.log(`📅 Meses disponíveis para ${targetYear}:`, uniqueMonths.map(m => ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][m]));
     return uniqueMonths;
   }, [transactions]);
 
@@ -423,7 +365,6 @@ export function useFinancialData() {
       .map(t => new Date(t.date).getDate());
     
     const uniqueDays = Array.from(new Set(days)).sort((a, b) => a - b);
-    console.log('📅 Dias disponíveis no mês atual:', uniqueDays);
     return uniqueDays;
   }, [transactions]);
 

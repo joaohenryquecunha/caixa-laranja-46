@@ -42,24 +42,19 @@ export function useGoals() {
 
   // Carregar dados do localStorage
   useEffect(() => {
-    console.log('📁 Carregando dados iniciais das metas...');
     loadInitialGoalData();
-    console.log('📁 Metas carregadas do cache:', globalGoals.length);
     setGoals([...globalGoals]);
     setGoalHistory([...globalGoalHistory]);
   }, []);
 
   // Salvar metas no localStorage
   useEffect(() => {
-    console.log('💾 Salvando metas no localStorage:', goals);
     localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
     globalGoals = [...goals];
-    console.log('💾 Metas salvas. Total:', goals.length);
   }, [goals]);
 
   // Salvar histórico no localStorage
   useEffect(() => {
-    console.log('💾 Salvando histórico no localStorage:', goalHistory);
     localStorage.setItem(GOAL_HISTORY_KEY, JSON.stringify(goalHistory));
     globalGoalHistory = [...goalHistory];
   }, [goalHistory]);
@@ -76,7 +71,6 @@ export function useGoals() {
   }, [transactions]); // Removido goals da dependência para evitar loop
 
   const addGoal = useCallback((goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => {
-    console.log('🎯 Adicionando nova meta:', goalData);
     const summary = getFinancialSummary();
     const newGoal: Goal = {
       ...goalData,
@@ -86,12 +80,7 @@ export function useGoals() {
       completed: false,
     };
 
-    console.log('🎯 Meta criada:', newGoal);
-    setGoals(prev => {
-      const newGoals = [...prev, newGoal];
-      console.log('🎯 Atualizando state de metas:', newGoals);
-      return newGoals;
-    });
+    setGoals(prev => [...prev, newGoal]);
     return newGoal.id;
   }, [getFinancialSummary]);
 

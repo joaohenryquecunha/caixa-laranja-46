@@ -69,19 +69,33 @@ serve(async (req) => {
       customer: customerId,
       status: "active",
       limit: 1,
+      expand: ["data.latest_invoice"],
     });
 
     const hasActiveSub = subscriptions.data.length > 0;
     let productId = null;
     let subscriptionEnd = null;
     let subscriptionId = null;
+    let lastPaymentDate = null;
+
+    const toIsoIfValid = (epochSeconds: number | null | undefined) => {
+      if (!epochSeconds) return null;
+      const date = new Date(epochSeconds * 1000);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    };
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       subscriptionId = subscription.id;
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      subscriptionEnd = toIsoIfValid(subscription.current_period_end);
+      lastPaymentDate = toIsoIfValid(subscription.current_period_start);
+
+      if (!lastPaymentDate && subscription.latest_invoice && typeof subscription.latest_invoice !== "string") {
+        lastPaymentDate = toIsoIfValid(subscription.latest_invoice.created);
+      }
+
       productId = subscription.items.data[0].price.product;
-      logStep("Active subscription found", { subscriptionId, productId, endDate: subscriptionEnd });
+      logStep("Active subscription found", { subscriptionId, productId, endDate: subscriptionEnd, lastPaymentDate });
 
       // Update user_activity table
       await supabaseClient
@@ -93,7 +107,8 @@ serve(async (req) => {
           subscription_status: 'active',
           subscription_product_id: productId as string,
           subscription_end_date: subscriptionEnd,
-        });
+          last_payment_date: lastPaymentDate,
+        }, { onConflict: 'user_id' });
     } else {
       logStep("No active subscription found");
 
@@ -117,6 +132,7 @@ serve(async (req) => {
       subscribed: hasActiveSub,
       product_id: productId,
       subscription_end: subscriptionEnd,
+      last_payment_date: lastPaymentDate,
       manual_access: false
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

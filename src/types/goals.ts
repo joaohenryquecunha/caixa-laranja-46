@@ -9,6 +9,7 @@ export interface Goal {
   createdAt: string;
   completed: boolean;
   completedAt?: string;
+  mode: 'automatic' | 'manual';
 }
 
 export interface GoalHistory {

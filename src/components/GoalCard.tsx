@@ -3,34 +3,44 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Target, 
-  Calendar, 
-  TrendingUp, 
-  Edit, 
-  Trash2, 
+import {
+  Target,
+  Calendar,
+  TrendingUp,
+  Edit,
+  Trash2,
   CheckCircle,
   Clock,
   DollarSign,
-  CalendarDays
+  CalendarDays,
+  Plus,
 } from 'lucide-react';
 import { Goal } from '@/types/goals';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { differenceInDays } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 interface GoalCardProps {
   goal: Goal;
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
+  onAddManualContribution?: (goalId: string, amount: number) => Promise<void>;
 }
 
-export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete, onAddManualContribution }: GoalCardProps) {
   const { getGoalProgress, completeGoal } = useSupabaseFinancialData();
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('daily');
+  const [showContributionForm, setShowContributionForm] = useState(false);
+  const [contributionAmount, setContributionAmount] = useState('');
+  const [isSubmittingContribution, setIsSubmittingContribution] = useState(false);
+  const { toast } = useToast();
   
   const progress = getGoalProgress(goal);
+  const isManual = goal.mode === 'manual';
   
   const getStatusColor = () => {
     if (goal.completed) return 'bg-success text-success-foreground';
@@ -49,7 +59,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
   return (
     <Card className="bg-gradient-card border-border shadow-card overflow-hidden transition-all duration-300 hover:shadow-lg animate-fade-in">
-      <div className="p-6">
+      <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -138,7 +148,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
         </div>
 
         {/* Target Info Toggle */}
-        {!goal.completed && progress.remainingDays > 0 && (
+        {!goal.completed && progress.remainingDays > 0 && !isManual && (
           <div className="mt-4">
             <Button
               variant="outline"
@@ -183,6 +193,81 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                   <p className="text-xs text-muted-foreground">
                     por {viewMode === 'daily' ? 'dia' : 'mês'}
                   </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manual contribution */}
+        {!goal.completed && isManual && onAddManualContribution && (
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowContributionForm((prev) => !prev)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Inserir saldo
+            </Button>
+            {showContributionForm && (
+              <div className="space-y-2 bg-muted/40 border border-border rounded-lg p-3">
+                <Label htmlFor={`contribution-${goal.id}`}>Valor do aporte</Label>
+                <Input
+                  id={`contribution-${goal.id}`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={contributionAmount}
+                  onChange={(e) => setContributionAmount(e.target.value)}
+                  placeholder="0,00"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    disabled={isSubmittingContribution}
+                    onClick={async () => {
+                      const value = Number(contributionAmount);
+                      if (!value || value <= 0 || Number.isNaN(value)) {
+                        toast({
+                          title: 'Valor inválido',
+                          description: 'Informe um valor maior que zero.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      if (!onAddManualContribution) return;
+                      setIsSubmittingContribution(true);
+                      try {
+                        await onAddManualContribution(goal.id, value);
+                        setContributionAmount('');
+                        setShowContributionForm(false);
+                      } catch (error) {
+                        toast({
+                          title: 'Erro',
+                          description: 'Não foi possível registrar o aporte.',
+                          variant: 'destructive',
+                        });
+                      } finally {
+                        setIsSubmittingContribution(false);
+                      }
+                    }}
+                  >
+                    Registrar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowContributionForm(false);
+                      setContributionAmount('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
                 </div>
               </div>
             )}

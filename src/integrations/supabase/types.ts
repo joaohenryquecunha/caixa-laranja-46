@@ -128,6 +128,7 @@ export type Database = {
           description: string | null
           id: string
           initial_balance: number | null
+          mode: string
           target_amount: number
           target_date: string
           title: string
@@ -142,6 +143,7 @@ export type Database = {
           description?: string | null
           id?: string
           initial_balance?: number | null
+          mode?: string
           target_amount: number
           target_date: string
           title: string
@@ -156,6 +158,7 @@ export type Database = {
           description?: string | null
           id?: string
           initial_balance?: number | null
+          mode?: string
           target_amount?: number
           target_date?: string
           title?: string
@@ -170,6 +173,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string | null
+          phone: string | null
           id: string
           updated_at: string
           user_id: string
@@ -179,6 +183,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          phone?: string | null
           id?: string
           updated_at?: string
           user_id: string
@@ -188,6 +193,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          phone?: string | null
           id?: string
           updated_at?: string
           user_id?: string
@@ -254,6 +260,7 @@ export type Database = {
           created_at: string
           id: string
           last_login: string | null
+          last_payment_date: string | null
           manual_access: boolean | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -268,6 +275,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_login?: string | null
+          last_payment_date?: string | null
           manual_access?: boolean | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -282,6 +290,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_login?: string | null
+          last_payment_date?: string | null
           manual_access?: boolean | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -325,6 +334,13 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      set_user_manual_access: {
+        Args: {
+          _target_user_id: string
+          _manual: boolean
+        }
+        Returns: void
       }
     }
     Enums: {

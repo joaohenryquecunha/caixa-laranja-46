@@ -14,7 +14,7 @@ export default function Goals() {
   const navigate = useNavigate();
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
-  const { deleteGoal, getActiveGoals, getCompletedGoals, addGoal, updateGoal, getFinancialSummary } = useSupabaseFinancialData();
+  const { deleteGoal, getActiveGoals, getCompletedGoals, addGoal, updateGoal, getFinancialSummary, addManualGoalContribution } = useSupabaseFinancialData();
 
   const activeGoals = getActiveGoals();
   const completedGoals = getCompletedGoals();
@@ -156,6 +156,7 @@ export default function Goals() {
                         goal={goal}
                         onEdit={handleEditGoal}
                         onDelete={deleteGoal}
+                        onAddManualContribution={addManualGoalContribution}
                       />
                     </div>
                   ))}
@@ -185,6 +186,7 @@ export default function Goals() {
                         goal={goal}
                         onEdit={handleEditGoal}
                         onDelete={deleteGoal}
+                        onAddManualContribution={addManualGoalContribution}
                       />
                     </div>
                   ))}

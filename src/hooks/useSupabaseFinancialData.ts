@@ -5,6 +5,7 @@ import { Goal, GoalProgress } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
+import { formatCurrency } from '@/lib/formatters';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -30,38 +31,20 @@ const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
     name: 'Salário',
     color: '#22c55e',
     icon: 'Wallet',
-    type: TransactionType.INCOME
-  },
-  {
-    name: 'Freelance',
-    color: '#3b82f6',
-    icon: 'Briefcase',
-    type: TransactionType.INCOME
+    type: TransactionType.INCOME,
   },
   {
     name: 'Alimentação',
     color: '#ef4444',
     icon: 'UtensilsCrossed',
-    type: TransactionType.EXPENSE
-  },
-  {
-    name: 'Transporte',
-    color: '#f59e0b',
-    icon: 'Car',
-    type: TransactionType.EXPENSE
+    type: TransactionType.EXPENSE,
   },
   {
     name: 'Ações',
     color: '#8b5cf6',
     icon: 'TrendingUp',
-    type: TransactionType.INVESTMENT
+    type: TransactionType.INVESTMENT,
   },
-  {
-    name: 'Criptomoedas',
-    color: '#06b6d4',
-    icon: 'Bitcoin',
-    type: TransactionType.INVESTMENT
-  }
 ];
 
 // Normalize DB row -> Transaction type used in the app
@@ -161,15 +144,28 @@ export function useSupabaseFinancialData() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setCategories(prev => [...prev, payload.new as Category]);
+            const inserted = {
+              id: payload.new.id,
+              name: payload.new.name,
+              color: payload.new.color,
+              icon: payload.new.icon,
+              type: payload.new.type as TransactionType,
+            };
+            setCategories(prev => {
+              if (prev.some(c => c.id === inserted.id)) return prev;
+              return [...prev, inserted];
+            });
           } else if (payload.eventType === 'UPDATE') {
-            setCategories(prev => 
-              prev.map(c => c.id === payload.new.id ? payload.new as Category : c)
-            );
+            const updated = {
+              id: payload.new.id,
+              name: payload.new.name,
+              color: payload.new.color,
+              icon: payload.new.icon,
+              type: payload.new.type as TransactionType,
+            };
+            setCategories(prev => prev.map(c => (c.id === updated.id ? updated : c)));
           } else if (payload.eventType === 'DELETE') {
-            setCategories(prev => 
-              prev.filter(c => c.id !== payload.old.id)
-            );
+            setCategories(prev => prev.filter(c => c.id !== payload.old.id));
           }
         }
       )
@@ -196,15 +192,24 @@ export function useSupabaseFinancialData() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setCompanies(prev => [...prev, payload.new as Company]);
+            const inserted: Company = {
+              id: payload.new.id,
+              name: payload.new.name,
+            };
+            setCompanies((prev) => {
+              if (prev.some((company) => company.id === inserted.id)) return prev;
+              return [...prev, inserted];
+            });
           } else if (payload.eventType === 'UPDATE') {
-            setCompanies(prev => 
-              prev.map(c => c.id === payload.new.id ? payload.new as Company : c)
+            const updated: Company = {
+              id: payload.new.id,
+              name: payload.new.name,
+            };
+            setCompanies((prev) =>
+              prev.map((company) => (company.id === updated.id ? updated : company))
             );
           } else if (payload.eventType === 'DELETE') {
-            setCompanies(prev => 
-              prev.filter(c => c.id !== payload.old.id)
-            );
+            setCompanies((prev) => prev.filter((company) => company.id !== payload.old.id));
           }
         }
       )
@@ -219,8 +224,6 @@ export function useSupabaseFinancialData() {
   useEffect(() => {
     if (!user) return;
 
-    console.log('🎯 Configurando real-time para goals');
-    
     const channel = supabase
       .channel(`goals-changes-${user.id}-${Date.now()}-${Math.random()}`)
       .on(
@@ -232,10 +235,8 @@ export function useSupabaseFinancialData() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🎯 Goal real-time event:', payload.eventType, payload);
-          
           if (payload.eventType === 'INSERT') {
-            const newGoal = {
+            const newGoal: Goal = {
               id: payload.new.id,
               title: payload.new.title,
               description: payload.new.description || undefined,
@@ -245,16 +246,17 @@ export function useSupabaseFinancialData() {
               targetDate: payload.new.target_date,
               createdAt: payload.new.created_at,
               completed: payload.new.completed || false,
-              completedAt: payload.new.completed_at || undefined
+              completedAt: payload.new.completed_at || undefined,
+              mode: (payload.new.mode as 'automatic' | 'manual') || 'automatic'
             };
-            console.log('🎯 Adicionando nova goal ao state:', newGoal);
             setGoals(prev => {
-              const updated = [newGoal, ...prev];
-              console.log('🎯 Goals atualizadas:', updated.length);
-              return updated;
+              if (prev.some(g => g.id === newGoal.id)) {
+                return prev.map(g => (g.id === newGoal.id ? newGoal : g));
+              }
+              return [newGoal, ...prev];
             });
           } else if (payload.eventType === 'UPDATE') {
-            const updatedGoal = {
+            const updatedGoal: Goal = {
               id: payload.new.id,
               title: payload.new.title,
               description: payload.new.description || undefined,
@@ -264,17 +266,13 @@ export function useSupabaseFinancialData() {
               targetDate: payload.new.target_date,
               createdAt: payload.new.created_at,
               completed: payload.new.completed || false,
-              completedAt: payload.new.completed_at || undefined
+              completedAt: payload.new.completed_at || undefined,
+              mode: (payload.new.mode as 'automatic' | 'manual') || 'automatic'
             };
-            console.log('🎯 Atualizando goal no state:', updatedGoal);
-            console.log('🎯 Status completed:', updatedGoal.completed, 'completedAt:', updatedGoal.completedAt);
             setGoals(prev => {
-              const updated = prev.map(g => g.id === updatedGoal.id ? updatedGoal : g);
-              console.log('🎯 Goals após UPDATE:', updated.map(g => ({ id: g.id, title: g.title, completed: g.completed })));
-              return updated;
+              return prev.map(g => g.id === updatedGoal.id ? updatedGoal : g);
             });
           } else if (payload.eventType === 'DELETE') {
-            console.log('🎯 Removendo goal do state:', payload.old.id);
             setGoals(prev => 
               prev.filter(g => g.id !== payload.old.id)
             );
@@ -292,11 +290,8 @@ export function useSupabaseFinancialData() {
   useEffect(() => {
     if (!user || goals.length === 0) return;
     
-    console.log('💰 Transações mudaram, atualizando progresso das metas. Total goals:', goals.length, 'Total transactions:', transactions.length);
-    
     goals.forEach(goal => {
       if (!goal.completed) {
-        console.log('📊 Atualizando progresso da meta:', goal.title);
         updateGoalProgressInDB(goal.id);
       }
     });
@@ -331,54 +326,157 @@ export function useSupabaseFinancialData() {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .eq('user_id', user.id)
-      .order('name');
+      .eq('user_id', user.id);
 
     if (error) {
       console.error('Error loading categories:', error);
       return;
     }
 
-    if (data.length === 0) {
-      // Create default categories for new users
-      await createDefaultCategories();
-    } else {
-      setCategories(data.map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        color: cat.color,
-        icon: cat.icon,
-        type: cat.type as TransactionType
-      })));
-    }
+    const normalized = await synchronizeCategories(data ?? []);
+    setCategories(normalized);
   };
 
-  const createDefaultCategories = async () => {
-    if (!user) return;
+  const synchronizeCategories = async (existing: any[]): Promise<Category[]> => {
+    if (!user) return [];
 
-    const categoriesToInsert = DEFAULT_CATEGORIES.map(cat => ({
-      ...cat,
-      user_id: user.id
-    }));
+    const keyFor = (type: string, name: string) => `${type}:${name.trim().toLowerCase()}`;
+    const map = new Map<string, any[]>();
 
-    const { data, error } = await supabase
-      .from('categories')
-      .insert(categoriesToInsert)
-      .select();
-
-    if (error) {
-      console.error('Error creating default categories:', error);
-      return;
+    for (const cat of existing) {
+      const key = keyFor(cat.type, cat.name);
+      const list = map.get(key) ?? [];
+      list.push(cat);
+      map.set(key, list);
     }
 
-    setCategories(data.map(cat => ({
+    const toDelete: string[] = [];
+    const keep: Category[] = [];
+    const toInsert: Omit<Category, 'id'>[] = [];
+
+    const toCategory = (cat: any): Category => ({
       id: cat.id,
       name: cat.name,
       color: cat.color,
       icon: cat.icon,
-      type: cat.type as TransactionType
-    })));
+      type: cat.type as TransactionType,
+    });
+
+    for (const required of DEFAULT_CATEGORIES) {
+      const key = keyFor(required.type, required.name);
+      const matches = map.get(key);
+
+      if (matches && matches.length > 0) {
+        const primary = matches.shift()!;
+        keep.push(toCategory(primary));
+
+        if (matches.length > 0) {
+          matches.forEach((duplicate) => toDelete.push(duplicate.id));
+        }
+
+        map.delete(key);
+      } else {
+        toInsert.push(required);
+      }
+    }
+
+    for (const remaining of map.values()) {
+      if (remaining.length > 0) {
+        const [first, ...duplicates] = remaining;
+        keep.push(toCategory(first));
+        duplicates.forEach((dup) => toDelete.push(dup.id));
+      }
+    }
+
+    if (toDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('categories')
+        .delete()
+        .in('id', toDelete);
+
+      if (deleteError) {
+        console.error('Error deleting extra categories:', deleteError);
+      }
+    }
+
+    let insertedCategories: Category[] = [];
+    if (toInsert.length > 0) {
+      const payload = toInsert.map((cat) => ({
+        ...cat,
+        user_id: user.id,
+      }));
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('categories')
+        .insert(payload)
+        .select();
+
+      if (insertError) {
+        console.error('Error inserting required categories:', insertError);
+      } else if (inserted) {
+        insertedCategories = inserted.map(toCategory);
+      }
+    }
+
+    const finalCategories = [...keep, ...insertedCategories];
+    const typeOrder = [
+      TransactionType.INCOME,
+      TransactionType.EXPENSE,
+      TransactionType.INVESTMENT,
+    ];
+
+    finalCategories.sort((a, b) => {
+      const typeDiff = typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
+      if (typeDiff !== 0) return typeDiff;
+      return a.name.localeCompare(b.name);
+    });
+
+    return finalCategories;
   };
+
+  const ensureMetaCategory = useCallback(async (): Promise<Category> => {
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const existing = categories.find(
+      (cat) => cat.type === TransactionType.EXPENSE && cat.name.toLowerCase() === 'meta'
+    );
+    if (existing) {
+      return existing;
+    }
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        user_id: user.id,
+        name: 'Meta',
+        color: '#7c3aed',
+        icon: 'Target',
+        type: TransactionType.EXPENSE,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar categoria Meta:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível criar a categoria Meta automaticamente.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+
+    const newCategory: Category = {
+      id: data.id,
+      name: data.name,
+      color: data.color,
+      icon: data.icon,
+      type: data.type as TransactionType,
+    };
+
+    setCategories((prev) => [...prev, newCategory]);
+    return newCategory;
+  }, [user, categories, toast]);
 
   const loadCompanies = async () => {
     if (!user) return;
@@ -394,10 +492,16 @@ export function useSupabaseFinancialData() {
       return;
     }
 
-    setCompanies(data.map(comp => ({
-      id: comp.id,
-      name: comp.name
-    })));
+    const unique: Company[] = [];
+    const seen = new Set<string>();
+    (data ?? []).forEach((comp) => {
+      if (!comp?.id) return;
+      if (seen.has(comp.id)) return;
+      seen.add(comp.id);
+      unique.push({ id: comp.id, name: comp.name });
+    });
+
+    setCompanies(unique);
   };
 
   const loadTransactions = async () => {
@@ -450,7 +554,8 @@ export function useSupabaseFinancialData() {
       targetDate: goal.target_date,
       createdAt: goal.created_at,
       completed: goal.completed || false,
-      completedAt: goal.completed_at || undefined
+      completedAt: goal.completed_at || undefined,
+      mode: (goal.mode as 'automatic' | 'manual') || 'automatic'
     })));
   };
 
@@ -615,8 +720,11 @@ export function useSupabaseFinancialData() {
       type: data.type as TransactionType
     };
 
-    setCategories(prev => [...prev, newCategory]);
-    
+    setCategories(prev => {
+      if (prev.some(c => c.id === newCategory.id)) return prev;
+      return [...prev, newCategory];
+    });
+
     toast({
       title: "Sucesso",
       description: "Categoria adicionada com sucesso"
@@ -713,7 +821,10 @@ export function useSupabaseFinancialData() {
       name: data.name
     };
 
-    setCompanies(prev => [...prev, newCompany]);
+    setCompanies(prev => {
+      if (prev.some(company => company.id === newCompany.id)) return prev;
+      return [...prev, newCompany];
+    });
     
     toast({
       title: "Sucesso",
@@ -785,7 +896,6 @@ export function useSupabaseFinancialData() {
   const getFilteredTransactions = useCallback(() => {
     const now = new Date();
     
-    console.log('🔍 Filtrando transações. Total:', transactions.length, 'Filtro:', specificFilter);
     
     const filtered = transactions.filter(transaction => {
       const transactionDate = new Date(transaction.date);
@@ -827,7 +937,6 @@ export function useSupabaseFinancialData() {
       }
     });
     
-    console.log('✅ Transações filtradas:', filtered.length);
     return filtered;
   }, [transactions, specificFilter]);
 
@@ -898,7 +1007,6 @@ export function useSupabaseFinancialData() {
   const getChartData = useCallback((): ChartDataPoint[] => {
     const filteredTransactions = getFilteredTransactions();
     
-    console.log('📊 Recalculando dados do gráfico. Transações:', filteredTransactions.length, 'Filtro:', specificFilter);
     
     if (filteredTransactions.length === 0) {
       return [];
@@ -961,17 +1069,17 @@ export function useSupabaseFinancialData() {
       };
     });
     
-    console.log('✅ Dados do gráfico calculados:', chartData.length, 'pontos');
     return chartData;
   }, [getFilteredTransactions, specificFilter]);
 
   // ============ GOALS FUNCTIONS ============
   
-  const addGoal = useCallback(async (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed'>) => {
+  const addGoal = useCallback(async (goalData: Omit<Goal, 'id' | 'createdAt' | 'currentProgress' | 'completed' | 'completedAt'>) => {
     if (!user) return '';
 
-    console.log('🎯 Criando nova meta:', goalData);
-    
+    const mode = goalData.mode || 'automatic';
+    const initialBalance = mode === 'automatic' ? goalData.initialBalance : 0;
+
     const { data, error } = await supabase
       .from('goals')
       .insert({
@@ -979,10 +1087,11 @@ export function useSupabaseFinancialData() {
         title: goalData.title,
         description: goalData.description || null,
         target_amount: goalData.targetAmount,
-        initial_balance: goalData.initialBalance,
-        current_progress: goalData.initialBalance,
+        initial_balance: initialBalance,
+        current_progress: initialBalance,
         target_date: goalData.targetDate,
-        completed: false
+        completed: false,
+        mode
       })
       .select()
       .single();
@@ -997,8 +1106,6 @@ export function useSupabaseFinancialData() {
       return '';
     }
 
-    console.log('✅ Meta criada com sucesso:', data);
-    
     // Adiciona otimisticamente ao state também (caso o real-time demore)
     const newGoal: Goal = {
       id: data.id,
@@ -1010,9 +1117,10 @@ export function useSupabaseFinancialData() {
       targetDate: data.target_date,
       createdAt: data.created_at,
       completed: data.completed || false,
-      completedAt: data.completed_at || undefined
+      completedAt: data.completed_at || undefined,
+      mode: (data.mode as 'automatic' | 'manual') || 'automatic'
     };
-    
+
     setGoals(prev => [newGoal, ...prev]);
     
     toast({
@@ -1022,6 +1130,7 @@ export function useSupabaseFinancialData() {
     
     return data.id;
   }, [user, toast]);
+
 
   const updateGoal = useCallback(async (goalId: string, updates: Partial<Goal>) => {
     if (!user) return;
@@ -1034,6 +1143,7 @@ export function useSupabaseFinancialData() {
     if (updates.completed !== undefined) updateData.completed = updates.completed;
     if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt;
     if (updates.currentProgress !== undefined) updateData.current_progress = updates.currentProgress;
+    if (updates.mode !== undefined) updateData.mode = updates.mode;
 
     const { error } = await supabase
       .from('goals')
@@ -1092,6 +1202,32 @@ export function useSupabaseFinancialData() {
   const completeGoal = useCallback(async (goalId: string) => {
     if (!user) return;
 
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) {
+      toast({
+        title: "Meta não encontrada",
+        description: "Não foi possível localizar esta meta para concluir.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const remainingAmount = Math.max(0, goal.targetAmount - goal.currentProgress);
+    const progressPercentage = goal.targetAmount > 0
+      ? (goal.currentProgress / goal.targetAmount) * 100
+      : 0;
+
+    const hasReachedTarget = remainingAmount <= 0.01 || progressPercentage >= 100;
+
+    if (!hasReachedTarget) {
+      toast({
+        title: "Meta ainda em andamento",
+        description: `Você precisa economizar ${formatCurrency(remainingAmount)} para concluir esta meta.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from('goals')
       .update({
@@ -1115,46 +1251,121 @@ export function useSupabaseFinancialData() {
       title: "Parabéns!",
       description: "Meta concluída com sucesso! 🎉"
     });
-  }, [user, toast]);
+  }, [user, toast, goals]);
+  const addManualGoalContribution = useCallback(async (goalId: string, amount: number) => {
+    if (!user) return;
+
+    if (!amount || amount <= 0 || Number.isNaN(amount)) {
+      toast({
+        title: 'Valor inválido',
+        description: 'Informe um valor maior que zero.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const goal = goals.find((g) => g.id === goalId);
+    if (!goal) {
+      toast({
+        title: 'Meta não encontrada',
+        description: 'Não foi possível localizar a meta selecionada.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (goal.mode !== 'manual') {
+      toast({
+        title: 'Meta automática',
+        description: 'Somente metas manuais aceitam aportes manuais.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const category = await ensureMetaCategory();
+
+      const today = format(new Date(), 'yyyy-MM-dd');
+      await addTransaction({
+        amount,
+        description: 'Saldo para meta',
+        categoryId: category.id,
+        companyId: undefined,
+        type: TransactionType.EXPENSE,
+        date: today,
+      });
+
+      const newProgress = goal.currentProgress + amount;
+      const { error } = await supabase
+        .from('goals')
+        .update({ current_progress: newProgress })
+        .eq('id', goalId)
+        .eq('user_id', user.id)
+        .select('id');
+
+      if (error) {
+        throw error;
+      }
+
+      setGoals((prev) =>
+        prev.map((g) =>
+          g.id === goalId
+            ? {
+                ...g,
+                currentProgress: newProgress,
+              }
+            : g
+        )
+      );
+
+      if (newProgress >= goal.targetAmount && !goal.completed) {
+        await completeGoal(goalId);
+      }
+
+      toast({
+        title: 'Aporte registrado',
+        description: 'O saldo foi adicionado à meta e registrado como despesa.',
+      });
+    } catch (error) {
+      console.error('Erro ao registrar aporte manual:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar o aporte manual.',
+        variant: 'destructive',
+      });
+    }
+  }, [user, goals, ensureMetaCategory, addTransaction, toast, completeGoal]);
+
 
   const updateGoalProgressInDB = useCallback(async (goalId: string) => {
     if (!user) return;
     
     const goal = goals.find(g => g.id === goalId);
     if (!goal || goal.completed) {
-      console.log('🚫 Meta não encontrada ou já concluída:', goalId);
       return;
     }
 
-    console.log('📊 Calculando progresso para meta:', goal.title);
-    console.log('📅 Data criação da meta:', goal.createdAt);
-    console.log('💰 Saldo inicial:', goal.initialBalance);
-    
+    if (goal.mode === 'manual') {
+      return;
+    }
     // Calculate transactions since goal creation (by creation timestamp, not financial date)
     const goalCreationDate = parseISO(goal.createdAt);
     const relevantTransactions = transactions.filter(transaction => 
       parseISO(transaction.createdAt) >= goalCreationDate
     );
 
-    console.log('📋 Transações relevantes desde criação da meta:', relevantTransactions.length);
-
     // Calculate progress based on transactions
     let progressChange = 0;
     relevantTransactions.forEach(transaction => {
       if (transaction.type === 'income') {
         progressChange += transaction.amount;
-        console.log('  ➕ Receita:', transaction.amount, transaction.description);
       } else if (transaction.type === 'expense' || transaction.type === 'investment') {
         progressChange -= transaction.amount;
-        console.log('  ➖ Saída (despesa/investimento):', transaction.amount, transaction.description);
       }
     });
 
     const newProgress = goal.initialBalance + progressChange;
-    
-    console.log('💵 Mudança de progresso:', progressChange);
-    console.log('📈 Novo progresso calculado:', newProgress);
-    console.log('🎯 Meta alvo:', goal.targetAmount);
     
     // Update in database
     const { error } = await supabase
@@ -1168,11 +1379,8 @@ export function useSupabaseFinancialData() {
       return;
     }
 
-    console.log('✅ Progresso da meta atualizado no banco');
-
     // Check if goal is completed
     if (newProgress >= goal.targetAmount && !goal.completed) {
-      console.log('🎉 Meta atingida! Marcando como concluída');
       await completeGoal(goalId);
     }
   }, [user, goals, transactions, completeGoal]);
@@ -1180,36 +1388,44 @@ export function useSupabaseFinancialData() {
   const getGoalProgress = useCallback((goal: Goal): GoalProgress => {
     const remainingAmount = Math.max(0, goal.targetAmount - goal.currentProgress);
     const remainingDays = Math.max(0, differenceInDays(parseISO(goal.targetDate), new Date()));
-    const dailyTarget = remainingDays > 0 ? remainingAmount / remainingDays : 0;
-    const monthlyTarget = dailyTarget * 30;
-    const progressPercentage = (goal.currentProgress / goal.targetAmount) * 100;
-    
-    // Calculate if on track
-    const totalDays = differenceInDays(parseISO(goal.targetDate), parseISO(goal.createdAt));
-    const daysPassed = totalDays - remainingDays;
-    const expectedProgress = (daysPassed / totalDays) * goal.targetAmount;
-    const isOnTrack = goal.currentProgress >= expectedProgress * 0.9; // 90% tolerance
+    let dailyTarget = 0;
+    let monthlyTarget = 0;
+    let isOnTrack = true;
+
+    if (goal.targetAmount > 0) {
+      if (goal.mode === 'automatic') {
+        dailyTarget = remainingDays > 0 ? remainingAmount / remainingDays : 0;
+        monthlyTarget = dailyTarget * 30;
+
+        const totalDays = differenceInDays(parseISO(goal.targetDate), parseISO(goal.createdAt)) || 1;
+        const daysPassed = totalDays - remainingDays;
+        const expectedProgress = (daysPassed / totalDays) * goal.targetAmount;
+        isOnTrack = goal.currentProgress >= expectedProgress * 0.9;
+      } else {
+        isOnTrack = true;
+      }
+    }
+
+    const progressPercentage = goal.targetAmount > 0
+      ? Math.min(100, (goal.currentProgress / goal.targetAmount) * 100)
+      : 0;
 
     return {
       remainingAmount,
       remainingDays,
       dailyTarget,
       monthlyTarget,
-      progressPercentage: Math.min(100, progressPercentage),
-      isOnTrack
+      progressPercentage,
+      isOnTrack,
     };
   }, []);
 
   const getActiveGoals = useCallback(() => {
-    const active = goals.filter(goal => !goal.completed);
-    console.log('🎯 getActiveGoals - Total goals:', goals.length, 'Active:', active.length);
-    return active;
+    return goals.filter(goal => !goal.completed);
   }, [goals]);
 
   const getCompletedGoals = useCallback(() => {
-    const completed = goals.filter(goal => goal.completed);
-    console.log('🏆 getCompletedGoals - Total goals:', goals.length, 'Completed:', completed.length);
-    return completed;
+    return goals.filter(goal => goal.completed);
   }, [goals]);
 
   return {
@@ -1244,6 +1460,7 @@ export function useSupabaseFinancialData() {
     updateGoal,
     deleteGoal,
     completeGoal,
+    addManualGoalContribution,
     getGoalProgress,
     getActiveGoals,
     getCompletedGoals

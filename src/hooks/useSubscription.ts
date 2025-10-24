@@ -8,6 +8,8 @@ export interface SubscriptionState {
   subscriptionEnd: string | null;
   manualAccess: boolean;
   loading: boolean;
+  hasValidData: boolean;
+  error: string | null;
 }
 
 export function useSubscription() {
@@ -18,9 +20,17 @@ export function useSubscription() {
     subscriptionEnd: null,
     manualAccess: false,
     loading: true,
+    hasValidData: false,
+    error: null,
   });
 
   const checkSubscription = async () => {
+    setSubscriptionState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+    }));
+
     if (!user) {
       setSubscriptionState({
         subscribed: false,
@@ -28,6 +38,8 @@ export function useSubscription() {
         subscriptionEnd: null,
         manualAccess: false,
         loading: false,
+        hasValidData: false,
+        error: null,
       });
       return;
     }
@@ -43,10 +55,16 @@ export function useSubscription() {
         subscriptionEnd: data.subscription_end || null,
         manualAccess: data.manual_access || false,
         loading: false,
+        hasValidData: true,
+        error: null,
       });
     } catch (error) {
       console.error('Error checking subscription:', error);
-      setSubscriptionState(prev => ({ ...prev, loading: false }));
+      setSubscriptionState(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Erro ao verificar assinatura',
+      }));
     }
   };
 

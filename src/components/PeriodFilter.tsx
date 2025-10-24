@@ -1,9 +1,10 @@
 import { Calendar, Clock, BarChart3, Globe, Filter, X, Building2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { SpecificFilter, FilterPeriod, useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/scroll-lock';
 
 interface PeriodFilterProps {
   specificFilter: SpecificFilter;
@@ -103,13 +104,19 @@ export function PeriodFilter({
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, [isOpen]);
+
   return (
     <>
       {/* Filter Button */}
       <Button
         variant="outline"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2"
+        className="flex items-center justify-center gap-2 w-full md:w-auto"
       >
         <Filter className="h-4 w-4" />
         {getMainFilterLabel()}

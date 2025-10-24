@@ -22,9 +22,7 @@ interface CategoryPieChartProps {
 
 export function CategoryPieChart({ transactions, getCategoryById, specificFilter }: CategoryPieChartProps) {
   const categoryData = useMemo(() => {
-    console.log('🔄 Recalculando dados do gráfico com filtro:', specificFilter);
     const filteredTransactions = transactions;
-    console.log('📊 Transações filtradas para o gráfico:', filteredTransactions.length);
 
     if (filteredTransactions.length === 0) {
       return [];
@@ -68,7 +66,6 @@ export function CategoryPieChart({ transactions, getCategoryById, specificFilter
       }))
       .sort((a, b) => b.amount - a.amount);
 
-    console.log('📈 Dados do gráfico calculados:', data);
     return data;
   }, [transactions, getCategoryById, specificFilter]);
 
@@ -151,7 +148,7 @@ export function CategoryPieChart({ transactions, getCategoryById, specificFilter
 
         {/* Gráfico de Pizza */}
         <div className="flex justify-center mb-6">
-          <div className="h-64 w-64">
+          <div className="w-full max-w-xs sm:max-w-sm aspect-square">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -178,27 +175,27 @@ export function CategoryPieChart({ transactions, getCategoryById, specificFilter
         </div>
 
         {/* Resumo das Categorias - Layout discreto horizontal */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {categoryData.map((category) => {
-            const categoryInfo = getCategoryById(category.categoryId);
-            return (
-              <div 
-                key={category.categoryId}
-                className="flex items-center gap-2 text-xs"
-              >
-                <div 
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {categoryData.map((category) => (
+            <div
+              key={category.categoryId}
+              className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs text-foreground"
+              style={{ backgroundColor: `${category.color}1a` }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: category.color }}
                 />
-                <span className="text-muted-foreground truncate">
+                <span className="truncate" style={{ color: category.color }}>
                   {category.categoryName}
                 </span>
-                <span className="text-foreground font-medium">
-                  {formatCurrency(category.amount)}
-                </span>
               </div>
-            );
-          })}
+              <span className="font-medium">
+                {formatCurrency(category.amount)}
+              </span>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

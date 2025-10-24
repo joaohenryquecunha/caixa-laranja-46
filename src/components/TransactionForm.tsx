@@ -61,15 +61,6 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         return;
       }
 
-      console.log('📝 Criando transações recorrentes:', {
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        categoryId: formData.categoryId,
-        type: formData.type,
-        startDate: recurringData.startDate.toISOString().split('T')[0],
-        times: times
-      });
-
       addRecurringTransactions({
         amount: parseFloat(formData.amount),
         description: formData.description,
@@ -85,14 +76,6 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         description: `${times} transações recorrentes criadas com sucesso.`,
       });
     } else {
-      console.log('📝 Criando transação única:', {
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        categoryId: formData.categoryId,
-        type: formData.type,
-        date: formData.date
-      });
-
       addTransaction({
         amount: parseFloat(formData.amount),
         description: formData.description,

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, createElement } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Transaction, Category, TransactionType, FinancialSummary, Company } from '@/types/financial';
-import { Goal, GoalProgress } from '@/types/goals';
+import { Goal, GoalProgress, GoalHistory } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
@@ -59,7 +59,17 @@ const mapDbTransaction = (tx: any): Transaction => ({
   createdAt: tx.created_at
 });
 
-export function useSupabaseFinancialData() {
+const mapDbGoalHistory = (entry: any): GoalHistory => ({
+  id: entry.id,
+  goalId: entry.goal_id,
+  transactionId: entry.transaction_id,
+  amount: Number(entry.amount),
+  date: entry.date,
+  description: entry.description,
+  createdAt: entry.created_at
+});
+
+function useSupabaseFinancialDataInternal() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
@@ -67,6 +77,7 @@ export function useSupabaseFinancialData() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalHistory, setGoalHistory] = useState<GoalHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ 
     type: 'month',
@@ -85,6 +96,7 @@ export function useSupabaseFinancialData() {
       setCategories([]);
       setCompanies([]);
       setGoals([]);
+      setGoalHistory([]);
       setLoading(false);
     }
   }, [user, authLoading]);
@@ -286,6 +298,46 @@ export function useSupabaseFinancialData() {
     };
   }, [user]);
 
+  // Real-time updates for goal history
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`goal-history-changes-${user.id}-${Date.now()}-${Math.random()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goal_history',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const entry = mapDbGoalHistory(payload.new);
+            setGoalHistory((prev) => {
+              if (prev.some((item) => item.id === entry.id)) return prev;
+              return [entry, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const entry = mapDbGoalHistory(payload.new);
+            setGoalHistory((prev) =>
+              prev.map((item) => (item.id === entry.id ? entry : item))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (!deletedId) return;
+            setGoalHistory((prev) => prev.filter((item) => item.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Update goal progress when transactions change
   useEffect(() => {
     if (!user || goals.length === 0) return;
@@ -306,7 +358,8 @@ export function useSupabaseFinancialData() {
         loadCategories(),
         loadCompanies(),
         loadTransactions(),
-        loadGoals()
+        loadGoals(),
+        loadGoalHistory()
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -559,8 +612,25 @@ export function useSupabaseFinancialData() {
     })));
   };
 
-  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+  const loadGoalHistory = async () => {
     if (!user) return;
+
+    const { data, error } = await supabase
+      .from('goal_history')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading goal history:', error);
+      return;
+    }
+
+    setGoalHistory((data ?? []).map(mapDbGoalHistory));
+  };
+
+  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'createdAt'>): Promise<Transaction | null> => {
+    if (!user) return null;
 
     const { data, error } = await supabase
       .from('transactions')
@@ -583,7 +653,7 @@ export function useSupabaseFinancialData() {
         description: "Erro ao adicionar transação",
         variant: "destructive"
       });
-      return;
+      return null;
     }
 
     const newTransaction: Transaction = mapDbTransaction(data);
@@ -592,6 +662,7 @@ export function useSupabaseFinancialData() {
     setTransactions(prev => [newTransaction, ...prev]);
     // Força recarregar do banco para garantir consistência e refletir RLS/ordenção
     await loadTransactions();
+    return newTransaction;
   }, [user, toast]);
 
   const addRecurringTransactions = useCallback(async (data: {
@@ -663,6 +734,31 @@ export function useSupabaseFinancialData() {
   const deleteTransaction = useCallback(async (id: string) => {
     if (!user) return;
 
+    let relatedHistory = goalHistory.find((entry) => entry.transactionId === id);
+
+    if (!relatedHistory) {
+      const { data: historyRow, error: fetchHistoryError } = await supabase
+        .from('goal_history')
+        .select('*')
+        .eq('transaction_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (fetchHistoryError) {
+        console.error('Error fetching goal history for transaction:', fetchHistoryError);
+      } else if (historyRow) {
+        relatedHistory = mapDbGoalHistory(historyRow);
+      }
+    }
+
+    const relatedGoal = relatedHistory
+      ? goals.find((goal) => goal.id === relatedHistory.goalId)
+      : undefined;
+    const manualGoalNewProgress =
+      relatedHistory && relatedGoal && relatedGoal.mode === 'manual'
+        ? Math.max(0, relatedGoal.currentProgress - relatedHistory.amount)
+        : null;
+
     const { error } = await supabase
       .from('transactions')
       .delete()
@@ -679,13 +775,45 @@ export function useSupabaseFinancialData() {
       return;
     }
 
+    if (relatedHistory && relatedGoal && relatedGoal.mode === 'manual' && manualGoalNewProgress !== null) {
+      const { error: goalUpdateError } = await supabase
+        .from('goals')
+        .update({ current_progress: manualGoalNewProgress })
+        .eq('id', relatedGoal.id)
+        .eq('user_id', user.id);
+
+      if (goalUpdateError) {
+        console.error('Error updating goal after transaction deletion:', goalUpdateError);
+      } else {
+        setGoals((prev) =>
+          prev.map((goal) =>
+            goal.id === relatedGoal.id ? { ...goal, currentProgress: manualGoalNewProgress } : goal
+          )
+        );
+      }
+    }
+
+    if (relatedHistory) {
+      const { error: deleteHistoryError } = await supabase
+        .from('goal_history')
+        .delete()
+        .eq('transaction_id', id)
+        .eq('user_id', user.id);
+
+      if (deleteHistoryError) {
+        console.error('Error deleting goal history after transaction deletion:', deleteHistoryError);
+      }
+
+      setGoalHistory((prev) => prev.filter((entry) => entry.transactionId !== id));
+    }
+
     setTransactions(prev => prev.filter(t => t.id !== id));
     
     toast({
       title: "Sucesso",
       description: "Transação excluída com sucesso"
     });
-  }, [user, toast]);
+  }, [user, toast, goalHistory, goals]);
 
   const addCategory = useCallback(async (category: Omit<Category, 'id'>) => {
     if (!user) return;
@@ -1287,7 +1415,7 @@ export function useSupabaseFinancialData() {
       const category = await ensureMetaCategory();
 
       const today = format(new Date(), 'yyyy-MM-dd');
-      await addTransaction({
+      const transaction = await addTransaction({
         amount,
         description: 'Saldo para meta',
         categoryId: category.id,
@@ -1295,6 +1423,35 @@ export function useSupabaseFinancialData() {
         type: TransactionType.EXPENSE,
         date: today,
       });
+
+      if (!transaction) {
+        throw new Error('Não foi possível registrar a transação da meta.');
+      }
+
+      const { data: historyData, error: historyError } = await supabase
+        .from('goal_history')
+        .insert({
+          user_id: user.id,
+          goal_id: goalId,
+          transaction_id: transaction.id,
+          amount,
+          date: today,
+          description: transaction.description || 'Aporte manual'
+        })
+        .select()
+        .single();
+
+      if (historyError) {
+        throw historyError;
+      }
+
+      if (historyData) {
+        const entry = mapDbGoalHistory(historyData);
+        setGoalHistory((prev) => {
+          if (prev.some((item) => item.id === entry.id)) return prev;
+          return [entry, ...prev];
+        });
+      }
 
       const newProgress = goal.currentProgress + amount;
       const { error } = await supabase
@@ -1365,7 +1522,7 @@ export function useSupabaseFinancialData() {
       }
     });
 
-    const newProgress = goal.initialBalance + progressChange;
+    const newProgress = Math.max(0, goal.initialBalance + progressChange);
     
     // Update in database
     const { error } = await supabase
@@ -1378,6 +1535,17 @@ export function useSupabaseFinancialData() {
       console.error('❌ Erro ao atualizar progresso da meta:', error);
       return;
     }
+
+    setGoals((prev) =>
+      prev.map((g) =>
+        g.id === goalId
+          ? {
+              ...g,
+              currentProgress: newProgress,
+            }
+          : g
+      )
+    );
 
     // Check if goal is completed
     if (newProgress >= goal.targetAmount && !goal.completed) {
@@ -1433,6 +1601,7 @@ export function useSupabaseFinancialData() {
     categories,
     companies,
     goals,
+    goalHistory,
     loading: loading || authLoading,
     specificFilter,
     setSpecificFilter,
@@ -1467,7 +1636,30 @@ export function useSupabaseFinancialData() {
   };
 }
 
-// Re-export provider from the TSX implementation so imports without extension
-// (e.g. import { SupabaseFinancialDataProvider } from "@/hooks/useSupabaseFinancialData")
-// continue to work even if resolver prefers the .ts file.
-export { SupabaseFinancialDataProvider } from './useSupabaseFinancialData.tsx';
+type SupabaseFinancialDataContextValue = ReturnType<typeof useSupabaseFinancialDataInternal>;
+
+const SupabaseFinancialDataContext = createContext<SupabaseFinancialDataContextValue | undefined>(undefined);
+
+interface SupabaseFinancialDataProviderProps {
+  children: ReactNode;
+}
+
+export function SupabaseFinancialDataProvider({ children }: SupabaseFinancialDataProviderProps) {
+  const value = useSupabaseFinancialDataInternal();
+
+  return createElement(
+    SupabaseFinancialDataContext.Provider,
+    { value },
+    children
+  );
+}
+
+export function useSupabaseFinancialData() {
+  const context = useContext(SupabaseFinancialDataContext);
+
+  if (!context) {
+    throw new Error('useSupabaseFinancialData deve ser usado dentro de SupabaseFinancialDataProvider');
+  }
+
+  return context;
+}

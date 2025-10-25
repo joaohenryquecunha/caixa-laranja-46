@@ -102,19 +102,10 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-md bg-gradient-card border-border shadow-card">
         <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-6">
             <h2 className="text-lg font-semibold text-foreground">
               Nova Transação
             </h2>
-            <Button
-              type="button"
-              variant={isRecurring ? "default" : "outline"}
-              size="sm"
-              onClick={() => setIsRecurring(!isRecurring)}
-              className={isRecurring ? "bg-primary text-primary-foreground" : ""}
-            >
-              Recorrente
-            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -289,7 +280,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Data inicial *</Label>
+                  <Label>Início *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -300,7 +291,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {recurringData.startDate ? format(recurringData.startDate, "PPP", { locale: ptBR }) : "Selecione a data"}
+                        {recurringData.startDate ? format(recurringData.startDate, "dd MMM yyyy", { locale: ptBR }) : "Selecione a data"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -316,6 +307,24 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 </div>
               </div>
             )}
+
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">Transação recorrente</p>
+                <p className="text-xs text-muted-foreground">
+                  Gere múltiplas transações automáticas com base na data inicial.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={isRecurring ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsRecurring(!isRecurring)}
+                className={isRecurring ? "bg-primary text-primary-foreground" : ""}
+              >
+                {isRecurring ? "Ativada" : "Ativar"}
+              </Button>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="date">Data {isRecurring ? "(será ignorada)" : "*"}</Label>

@@ -19,6 +19,7 @@ export interface GoalHistory {
   transactionId: string;
   date: string;
   description: string;
+  createdAt: string;
 }
 
 export interface GoalProgress {

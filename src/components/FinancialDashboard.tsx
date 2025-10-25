@@ -97,13 +97,26 @@ export function FinancialDashboard({
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">
-              Sua Carteira
-            </h1>
-            <p className="text-muted-foreground">
-              Gerencie suas finanças
-            </p>
+          <div className="flex items-start justify-between gap-3 md:gap-0 md:block">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-foreground">
+                Sua Carteira
+              </h1>
+              <p className="text-muted-foreground">
+                Gerencie suas finanças
+              </p>
+            </div>
+            <FloatingActionButton
+              onNewTransaction={() => setShowTransactionForm(true)}
+              onCategoryManager={() => setShowCategoryManager(true)}
+              onCompanyManager={() => setShowCompanyManager(true)}
+              showManageSubscription={showManageSubscription}
+              onManageSubscription={onManageSubscription}
+              isAdmin={isAdmin}
+              onAdmin={isAdmin ? handleAdminNavigate : undefined}
+              onSignOut={onSignOut}
+              menuButtonContainerClassName="relative z-50 flex-shrink-0"
+            />
           </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full md:w-auto">
             <div className="w-full md:w-auto">
@@ -288,17 +301,6 @@ export function FinancialDashboard({
           <CompanyManager onClose={() => setShowCompanyManager(false)} />
         )}
 
-        {/* Floating Action Button para Mobile */}
-        <FloatingActionButton
-          onNewTransaction={() => setShowTransactionForm(true)}
-          onCategoryManager={() => setShowCategoryManager(true)}
-          onCompanyManager={() => setShowCompanyManager(true)}
-          showManageSubscription={showManageSubscription}
-          onManageSubscription={onManageSubscription}
-          isAdmin={isAdmin}
-          onAdmin={isAdmin ? handleAdminNavigate : undefined}
-          onSignOut={onSignOut}
-        />
       </div>
     </div>
   );

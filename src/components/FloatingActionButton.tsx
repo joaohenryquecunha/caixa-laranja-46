@@ -14,6 +14,7 @@ interface FloatingActionButtonProps {
   isAdmin?: boolean;
   onAdmin?: () => void;
   onSignOut?: () => void;
+  menuButtonContainerClassName?: string;
 }
 
 export function FloatingActionButton({ 
@@ -25,6 +26,7 @@ export function FloatingActionButton({
   isAdmin,
   onAdmin,
   onSignOut,
+  menuButtonContainerClassName,
 }: FloatingActionButtonProps) {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,7 +52,12 @@ export function FloatingActionButton({
   return (
     <>
       {/* Botão do Menu - Parte Superior Direita */}
-      <div className="fixed top-4 right-4 z-50 md:hidden">
+      <div
+        className={cn(
+          "md:hidden z-50",
+          menuButtonContainerClassName ?? "fixed top-4 right-4"
+        )}
+      >
         <Button
           onClick={toggleMenu}
           variant="outline"
@@ -80,8 +87,20 @@ export function FloatingActionButton({
           
           {/* Menu Content */}
           <div className="absolute inset-0 bg-background/95 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex flex-col h-full pt-20 px-6">
-              <div className="space-y-4">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
+                <div className="text-lg font-semibold text-foreground">Menu</div>
+                <Button
+                  onClick={toggleMenu}
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-lg border border-border/60 bg-card hover:bg-card/80"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
                 <Button
                   onClick={() => {
                     navigate('/metas');
@@ -164,7 +183,7 @@ export function FloatingActionButton({
                 </Button>
               </div>
               {onSignOut && (
-                <div className="mt-auto pb-8 pt-6">
+                <div className="px-6 pb-8">
                   <Button
                     onClick={() => handleAction(onSignOut)}
                     variant="outline"

@@ -1,9 +1,19 @@
+import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { Transaction, TransactionType } from '@/types/financial';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { toast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -21,15 +31,23 @@ export function TransactionList({
   showScrollbar = true 
 }: TransactionListProps) {
   const { getCategoryById } = useSupabaseFinancialData();
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
-  const handleDelete = (id: string) => {
+  const requestDelete = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!transactionToDelete) return;
+    const id = transactionToDelete.id;
     if (onDeleteTransaction) {
       onDeleteTransaction(id);
     }
-    toast({
-      title: "Transação removida",
-      description: "A transação foi removida com sucesso.",
-    });
+    setTransactionToDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setTransactionToDelete(null);
   };
 
   const getTransactionColor = (type: TransactionType) => {
@@ -98,12 +116,11 @@ export function TransactionList({
               <p className={`font-semibold transition-all duration-300 ${colorClass} text-right sm:text-right`}> 
                 {sign}{formatCurrency(transaction.amount)}
               </p>
-              
               {showDeleteButton && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(transaction.id)}
+                  onClick={() => requestDelete(transaction)}
                   className="text-muted-foreground hover:text-destructive p-2 transition-all duration-200 hover:scale-110"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -113,6 +130,26 @@ export function TransactionList({
           </div>
         );
       })}
+
+      <AlertDialog open={!!transactionToDelete} onOpenChange={(open) => !open && handleCancelDelete()}>
+        <AlertDialogContent className="bg-gradient-card border-border z-[120]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir transação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é definitiva e irá atualizar todos os cálculos relacionados a esta transação. Tem certeza que deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

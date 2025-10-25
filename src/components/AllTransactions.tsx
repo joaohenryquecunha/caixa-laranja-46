@@ -17,7 +17,13 @@ interface AllTransactionsProps {
 }
 
 export function AllTransactions({ onClose }: AllTransactionsProps) {
-  const { getFilteredTransactions, categories, companies, getCompanyById } = useSupabaseFinancialData();
+  const { 
+    getFilteredTransactions, 
+    categories, 
+    companies, 
+    getCompanyById,
+    deleteTransaction 
+  } = useSupabaseFinancialData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -103,7 +109,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
   }, [searchedTransactions.length, visibleCount]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 p-4 z-[70] overflow-auto scrollbar-hide">
+    <div className="fixed inset-0 bg-black/50 p-4 z-40 overflow-auto scrollbar-hide">
       <div className="mx-auto flex justify-center min-h-full">
         <Card className="w-full max-w-full sm:max-w-6xl bg-gradient-card border-border shadow-card overflow-visible sm:overflow-hidden">
           <div className="flex flex-col gap-6 p-4 sm:p-6 sm:max-h-[90vh] sm:overflow-visible">
@@ -227,6 +233,9 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
                           transactions={transactionsToDisplay}
                           showDeleteButton={true}
                           showScrollbar={false}
+                          onDeleteTransaction={async (id) => {
+                            await deleteTransaction(id);
+                          }}
                         />
                         {visibleCount < searchedTransactions.length && (
                           <div

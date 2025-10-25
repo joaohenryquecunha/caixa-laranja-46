@@ -1466,3 +1466,8 @@ export function useSupabaseFinancialData() {
     getCompletedGoals
   };
 }
+
+// Re-export provider from the TSX implementation so imports without extension
+// (e.g. import { SupabaseFinancialDataProvider } from "@/hooks/useSupabaseFinancialData")
+// continue to work even if resolver prefers the .ts file.
+export { SupabaseFinancialDataProvider } from './useSupabaseFinancialData.tsx';

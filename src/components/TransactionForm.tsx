@@ -99,8 +99,8 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md bg-gradient-card border-border shadow-card">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-auto">
+      <Card className="w-full max-w-md bg-gradient-card border-border shadow-card max-h-[calc(100vh-4rem)] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-6">
             <h2 className="text-lg font-semibold text-foreground">

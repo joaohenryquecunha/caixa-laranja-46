@@ -14,9 +14,10 @@ import { TransactionType } from '@/types/financial';
 
 interface AllTransactionsProps {
   onClose: () => void;
+  initialFilterType?: string;
 }
 
-export function AllTransactions({ onClose }: AllTransactionsProps) {
+export function AllTransactions({ onClose, initialFilterType }: AllTransactionsProps) {
   const { 
     getFilteredTransactions, 
     categories, 
@@ -25,7 +26,7 @@ export function AllTransactions({ onClose }: AllTransactionsProps) {
     deleteTransaction 
   } = useSupabaseFinancialData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>(initialFilterType ?? 'all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterCompany, setFilterCompany] = useState<string>('none');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
+import { TransactionType } from '@/types/financial';
 import { Button } from '@/components/ui/button';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionForm } from '@/components/TransactionForm';
@@ -54,6 +55,7 @@ export function FinancialDashboard({
   } = useSupabaseFinancialData();
   
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [allInitialFilterType, setAllInitialFilterType] = useState<string>('all');
 
   const modalOpen = showTransactionForm || showAllTransactions || showCategoryManager || showCompanyManager;
 
@@ -194,7 +196,19 @@ export function FinancialDashboard({
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          <Card className="bg-gradient-card border-border shadow-card p-6">
+          <Card
+            onClick={() => {
+              setSpecificFilter({
+                type: 'month',
+                month: new Date().getMonth(),
+                year: new Date().getFullYear(),
+                companyId: undefined
+              });
+              setAllInitialFilterType(TransactionType.INCOME);
+              setShowAllTransactions(true);
+            }}
+            className="bg-gradient-card border-border shadow-card p-6 cursor-pointer hover:shadow-lg"
+          >
             <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 bg-success/20 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-success" />
@@ -208,7 +222,19 @@ export function FinancialDashboard({
             </div>
           </Card>
 
-          <Card className="bg-gradient-card border-border shadow-card p-6">
+          <Card
+            onClick={() => {
+              setSpecificFilter({
+                type: 'month',
+                month: new Date().getMonth(),
+                year: new Date().getFullYear(),
+                companyId: undefined
+              });
+              setAllInitialFilterType(TransactionType.EXPENSE);
+              setShowAllTransactions(true);
+            }}
+            className="bg-gradient-card border-border shadow-card p-6 cursor-pointer hover:shadow-lg"
+          >
             <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 bg-destructive/20 rounded-lg">
                 <TrendingDown className="h-5 w-5 text-destructive" />
@@ -222,7 +248,19 @@ export function FinancialDashboard({
             </div>
           </Card>
 
-          <Card className="bg-gradient-card border-border shadow-card p-6">
+          <Card
+            onClick={() => {
+              setSpecificFilter({
+                type: 'month',
+                month: new Date().getMonth(),
+                year: new Date().getFullYear(),
+                companyId: undefined
+              });
+              setAllInitialFilterType(TransactionType.INVESTMENT);
+              setShowAllTransactions(true);
+            }}
+            className="bg-gradient-card border-border shadow-card p-6 cursor-pointer hover:shadow-lg"
+          >
             <div className="flex items-start sm:items-center gap-3">
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <DollarSign className="h-5 w-5 text-blue-500" />
@@ -254,9 +292,12 @@ export function FinancialDashboard({
                   Transações
                 </h2>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAllTransactions(true)}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAllInitialFilterType('all');
+                      setShowAllTransactions(true);
+                    }}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <List className="mr-2 h-4 w-4" />
@@ -288,7 +329,7 @@ export function FinancialDashboard({
 
         {/* All Transactions Modal */}
         {showAllTransactions && (
-          <AllTransactions onClose={() => setShowAllTransactions(false)} />
+          <AllTransactions initialFilterType={allInitialFilterType} onClose={() => setShowAllTransactions(false)} />
         )}
 
         {/* Category Manager Modal */}

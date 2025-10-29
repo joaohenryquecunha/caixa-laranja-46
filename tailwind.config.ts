@@ -86,6 +86,11 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
+        rainbow: {
+          '0%': { 'background-position': '0% 50%' },
+          '50%': { 'background-position': '100% 50%' },
+          '100%': { 'background-position': '0% 50%' },
+        },
         "accordion-down": {
           from: {
             height: "0",
@@ -104,6 +109,7 @@ export default {
         },
       },
       animation: {
+        rainbow: "rainbow 6s linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },

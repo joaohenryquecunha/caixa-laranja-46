@@ -49,6 +49,12 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(15 100% 60%), hsl(15 90% 55%));
     --gradient-card: linear-gradient(135deg, hsl(217 19% 12%), hsl(217 19% 15%));
     --gradient-balance: linear-gradient(90deg, hsl(15 100% 60%) 0%, hsl(25 100% 55%) 100%);
+  /* Rainbow color stops (H S% L%) - used by RainbowButton */
+  --color-1: 0 100% 50%;    /* Red */
+  --color-2: 30 100% 50%;   /* Orange */
+  --color-3: 48 100% 50%;   /* Yellow */
+  --color-4: 140 60% 40%;   /* Green */
+  --color-5: 240 90% 55%;   /* Blue */
     
     /* Transition for smooth animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -127,4 +133,11 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Animate rainbow keyframes fallback for non-tailwind usage */
+@keyframes rainbow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

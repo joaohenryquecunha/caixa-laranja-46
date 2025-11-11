@@ -176,21 +176,19 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label>Tipo *</Label>
-                        <Select
+                        <Label htmlFor="categoryType">Tipo *</Label>
+                        <select
+                          id="categoryType"
                           value={formData.type}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as TransactionType }))}
+                          onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TransactionType }))}
                           disabled={editingCategory ? isCategoryInUse(editingCategory) : false}
+                          className="h-10 w-full rounded-md border border-border bg-input px-3 py-2 text-sm"
                         >
-                          <SelectTrigger className="bg-input border-border">
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border">
-                            <SelectItem value={TransactionType.INCOME}>Receita</SelectItem>
-                            <SelectItem value={TransactionType.EXPENSE}>Despesa</SelectItem>
-                            <SelectItem value={TransactionType.INVESTMENT}>Investimento</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <option value="">Selecione o tipo</option>
+                          <option value={TransactionType.INCOME}>Receita</option>
+                          <option value={TransactionType.EXPENSE}>Despesa</option>
+                          <option value={TransactionType.INVESTMENT}>Investimento</option>
+                        </select>
                         {editingCategory && isCategoryInUse(editingCategory) && (
                           <p className="text-xs text-muted-foreground">
                             Tipo não pode ser alterado pois há transações usando esta categoria

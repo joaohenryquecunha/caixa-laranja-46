@@ -11,6 +11,7 @@ import { BalanceChart } from '@/components/BalanceChart';
 import { AllTransactions } from '@/components/AllTransactions';
 import { PeriodFilter } from '@/components/PeriodFilter';
 import { CategoryManager } from '@/components/CategoryManager';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { CompanyManager } from '@/components/CompanyManager';
 import { CategoryPieChart } from '@/components/CategoryPieChart';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
@@ -334,7 +335,9 @@ export function FinancialDashboard({
 
         {/* Category Manager Modal */}
         {showCategoryManager && (
-          <CategoryManager onClose={() => setShowCategoryManager(false)} />
+          <ErrorBoundary onReset={() => setShowCategoryManager(false)}>
+            <CategoryManager onClose={() => setShowCategoryManager(false)} />
+          </ErrorBoundary>
         )}
 
         {/* Company Manager Modal */}

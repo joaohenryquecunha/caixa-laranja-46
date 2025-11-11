@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionType } from '@/types/financial';
 import { CategoryManager } from '@/components/CategoryManager';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -361,7 +362,9 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       
       {/* Category Manager Modal */}
       {showCategoryManager && (
-        <CategoryManager onClose={() => setShowCategoryManager(false)} />
+        <ErrorBoundary onReset={() => setShowCategoryManager(false)}>
+          <CategoryManager onClose={() => setShowCategoryManager(false)} />
+        </ErrorBoundary>
       )}
     </div>
   );

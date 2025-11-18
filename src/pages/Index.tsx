@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinancialDashboard } from '@/components/FinancialDashboard';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,14 +7,19 @@ import { LogOut, User, Shield, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useSubscription } from '@/hooks/useSubscription';
 import { SubscriptionRequiredModal } from '@/components/SubscriptionRequiredModal';
+import { PhoneRequiredModal } from '@/components/PhoneRequiredModal';
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [phoneChecked, setPhoneChecked] = useState(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+
   const {
     subscribed,
     manualAccess,
@@ -24,20 +29,44 @@ const Index = () => {
     createCheckout,
     openCustomerPortal,
     checkSubscription,
-  } = useSubscription();
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-    
-    if (user) {
-      checkAdminStatus();
-    }
-  }, [user, loading, navigate]);
+  } = useSubscription(phoneChecked);
 
-  const checkAdminStatus = async () => {
+
+  useEffect(() => {
+    // After we have the user, check if profile has phone. If not, show modal.
+    const checkPhone = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('phone')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          // If there's an error reading profile, still allow subscription checks to proceed
+          setPhoneChecked(true);
+          return;
+        }
+
+        if (!data || !data.phone) {
+          setShowPhoneModal(true);
+        } else {
+          setPhoneChecked(true);
+        }
+      } catch (error) {
+        console.error('Error checking phone:', error);
+        setPhoneChecked(true);
+      }
+    };
+
+    checkPhone();
+  }, [user]);
+
+  const checkAdminStatus = useCallback(async () => {
     if (!user) return;
-    
+
     const { data } = await supabase
       .from('user_roles')
       .select('role')
@@ -46,7 +75,17 @@ const Index = () => {
       .maybeSingle();
 
     setIsAdmin(!!data);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+
+    if (user) {
+      checkAdminStatus();
+    }
+  }, [user, loading, navigate, checkAdminStatus]);
 
   const handleSignOut = async () => {
     try {
@@ -75,6 +114,56 @@ const Index = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleSavePhone = async (phone: string) => {
+    if (!user) return;
+
+    // Check whether this phone is already associated with another user
+    const { data: existingProfile, error: existingError } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('phone', phone)
+      .maybeSingle();
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (existingProfile && existingProfile.user_id && existingProfile.user_id !== user.id) {
+      const message = 'Este telefone já está associado a outra conta. Verifique o número ou entre em contato com o suporte.';
+      // throw so the caller (modal) can show an error instead of the modal showing success
+      throw new Error(message);
+    }
+
+    // include user metadata when creating/updating profile so fields like display_name, email and avatar are preserved
+    const profilePayloadBase = {
+      user_id: user.id,
+      phone,
+    };
+
+    // prefer user_metadata full_name or name
+    type UM = { full_name?: string; name?: string; avatar_url?: string; picture?: string };
+    const um = user.user_metadata as UM | undefined;
+    const displayName = um?.full_name ?? um?.name ?? null;
+    const avatarUrl = um?.avatar_url ?? um?.picture ?? null;
+    const profilePayload = {
+      ...profilePayloadBase,
+      ...(displayName ? { display_name: displayName } : {}),
+      ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+      ...(user.email ? { email: user.email } : {}),
+    } as Database['public']['Tables']['profiles']['Insert'];
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(profilePayload, { onConflict: 'user_id' });
+
+    if (error) throw error;
+
+    setShowPhoneModal(false);
+    setPhoneChecked(true);
+    // trigger immediate subscription check
+    await checkSubscription();
   };
 
   if (loading) {
@@ -141,6 +230,11 @@ const Index = () => {
         onSubscribe={createCheckout}
         onRefreshStatus={checkSubscription}
         onOpenPortal={openCustomerPortal}
+        onSignOut={handleSignOut}
+      />
+      <PhoneRequiredModal
+        open={showPhoneModal}
+        onSave={handleSavePhone}
         onSignOut={handleSignOut}
       />
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -12,7 +12,7 @@ export interface SubscriptionState {
   error: string | null;
 }
 
-export function useSubscription() {
+export function useSubscription(enabled = true) {
   const { user } = useAuth();
   const [subscriptionState, setSubscriptionState] = useState<SubscriptionState>({
     subscribed: false,
@@ -24,7 +24,7 @@ export function useSubscription() {
     error: null,
   });
 
-  const checkSubscription = async () => {
+  const checkSubscription = useCallback(async () => {
     setSubscriptionState(prev => ({
       ...prev,
       loading: true,
@@ -66,16 +66,22 @@ export function useSubscription() {
         error: error instanceof Error ? error.message : 'Erro ao verificar assinatura',
       }));
     }
-  };
+  }, [user]);
 
   useEffect(() => {
+    if (!enabled) {
+      // mark as not loaded yet but not error
+      setSubscriptionState(prev => ({ ...prev, loading: false }));
+      return;
+    }
+
     checkSubscription();
-    
+
     // Check every 60 seconds
     const interval = setInterval(checkSubscription, 60000);
-    
+
     return () => clearInterval(interval);
-  }, [user]);
+  }, [checkSubscription, enabled]);
 
   const createCheckout = async () => {
     try {

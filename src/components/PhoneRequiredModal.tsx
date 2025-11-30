@@ -27,11 +27,16 @@ export function PhoneRequiredModal({ open, onSave, onSignOut }: PhoneRequiredMod
 
   const handleSave = async () => {
     // normalize to digits only
-    const cleaned = phone.replace(/\D/g, '');
+    let cleaned = phone.replace(/\D/g, '');
 
-    // basic validation: if starts with 55 (Brazil) require DDD (2 digits) + local number
+    // Only apply the "remove 5th digit" normalization for Brazilian numbers starting with '55'.
     if (cleaned.startsWith('55')) {
-      // expected 55 + DDD(2) + number(8) = 12 digits (this app expects without extra 9)
+      // If user provided 13 digits, remove the 5th digit (index 4). If 12 digits, accept as-is.
+      if (cleaned.length === 13) {
+        cleaned = cleaned.slice(0, 4) + cleaned.slice(5);
+      }
+
+      // basic validation for Brazil: expected 55 + DDD(2) + number(8) = 12 digits
       if (cleaned.length < 12) {
         toast({
           title: 'DDD ausente ou formato inválido',
@@ -41,11 +46,11 @@ export function PhoneRequiredModal({ open, onSave, onSignOut }: PhoneRequiredMod
         return;
       }
     } else {
-      // fallback minimal length for other countries
+      // fallback minimal length for other countries (do not alter digits)
       if (!cleaned || cleaned.length < 11) {
         toast({
           title: 'Formato inválido',
-          description: 'Informe o telefone no formato internacional (ex.: 554491235487).',
+          description: 'Informe o telefone no formato (ex.: 554491235487).',
           variant: 'destructive',
         });
         return;
@@ -78,7 +83,7 @@ export function PhoneRequiredModal({ open, onSave, onSignOut }: PhoneRequiredMod
           </div>
           <div className="space-y-2">
             <CardTitle className="text-2xl font-semibold text-foreground">Ative automações via WhatsApp</CardTitle>
-            <CardDescription className="text-base">Insira seu telefone para utilizar nossas automações pelo WhatsApp. Informe no formato internacional sem dígitos extras — por exemplo: <strong>554491235487</strong>.</CardDescription>
+            <CardDescription className="text-base">Insira seu telefone para utilizar nossas automações pelo WhatsApp. Informe no formato (ex.: <strong>554491235487</strong>).</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">

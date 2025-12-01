@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -24,6 +24,8 @@ interface TransactionFormProps {
 export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     description: '',
@@ -98,6 +100,15 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const filteredCategories = categories.filter(cat => 
     !formData.type || cat.type === formData.type
   );
+
+  // Fechar selects quando a lista de categorias/empresas mudar (evita condição de corrida do Portal)
+  useEffect(() => {
+    setCategoryOpen(false);
+  }, [categories]);
+
+  useEffect(() => {
+    setCompanyOpen(false);
+  }, [companies]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-auto">
@@ -211,6 +222,8 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 value={formData.categoryId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
                 disabled={!formData.type}
+                open={categoryOpen}
+                onOpenChange={setCategoryOpen}
               >
                 <SelectTrigger className="bg-input border-border">
                   <SelectValue placeholder={
@@ -237,6 +250,8 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 <Select
                   value={formData.companyId || "none"}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value === "none" ? "" : value }))}
+                  open={companyOpen}
+                  onOpenChange={setCompanyOpen}
                 >
                   <SelectTrigger className="bg-input border-border">
                     <SelectValue placeholder="Selecione uma empresa (opcional)" />

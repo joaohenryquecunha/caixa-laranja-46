@@ -81,7 +81,7 @@ const MenubarContent = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.Content>
 >(({ className, align = "start", alignOffset = -4, sideOffset = 8, ...props }, ref) => (
-  <MenubarPrimitive.Portal>
+  <MenubarPrimitive.Portal container={typeof document !== 'undefined' ? document.getElementById('radix-portal-root') || document.body : undefined}>
     <MenubarPrimitive.Content
       ref={ref}
       align={align}

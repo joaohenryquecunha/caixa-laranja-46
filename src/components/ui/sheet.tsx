@@ -53,7 +53,7 @@ interface SheetContentProps
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, ...props }, ref) => (
-    <SheetPortal>
+    <SheetPortal container={typeof document !== 'undefined' ? document.getElementById('radix-portal-root') || document.body : undefined}>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
         {children}

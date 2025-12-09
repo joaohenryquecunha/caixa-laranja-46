@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +40,13 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     times: '12',
     startDate: new Date()
   });
+
+  // Refs para rastrear se o componente está montado e evitar condições de corrida
+  const isMountedRef = useRef(true);
+  const categoryCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const companyCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevCategoriesLengthRef = useRef(categories.length);
+  const prevCompaniesLengthRef = useRef(companies.length);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,14 +108,63 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     !formData.type || cat.type === formData.type
   );
 
-  // Fechar selects quando a lista de categorias/empresas mudar (evita condição de corrida do Portal)
+  // Limpar timeouts quando o componente desmontar
   useEffect(() => {
-    setCategoryOpen(false);
-  }, [categories]);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (categoryCloseTimeoutRef.current) {
+        clearTimeout(categoryCloseTimeoutRef.current);
+      }
+      if (companyCloseTimeoutRef.current) {
+        clearTimeout(companyCloseTimeoutRef.current);
+      }
+    };
+  }, []);
 
+  // Fechar select de categoria de forma segura quando a lista mudar
   useEffect(() => {
-    setCompanyOpen(false);
-  }, [companies]);
+    // Só fecha se a lista realmente mudou (não apenas na primeira renderização)
+    const categoriesChanged = categories.length !== prevCategoriesLengthRef.current;
+    
+    if (categoriesChanged && categoryOpen && isMountedRef.current) {
+      // Limpa timeout anterior se existir
+      if (categoryCloseTimeoutRef.current) {
+        clearTimeout(categoryCloseTimeoutRef.current);
+      }
+      
+      // Usa um pequeno delay para permitir que o Portal termine sua animação
+      categoryCloseTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setCategoryOpen(false);
+        }
+      }, 100);
+    }
+    
+    prevCategoriesLengthRef.current = categories.length;
+  }, [categories, categoryOpen]);
+
+  // Fechar select de empresa de forma segura quando a lista mudar
+  useEffect(() => {
+    // Só fecha se a lista realmente mudou (não apenas na primeira renderização)
+    const companiesChanged = companies.length !== prevCompaniesLengthRef.current;
+    
+    if (companiesChanged && companyOpen && isMountedRef.current) {
+      // Limpa timeout anterior se existir
+      if (companyCloseTimeoutRef.current) {
+        clearTimeout(companyCloseTimeoutRef.current);
+      }
+      
+      // Usa um pequeno delay para permitir que o Portal termine sua animação
+      companyCloseTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setCompanyOpen(false);
+        }
+      }, 100);
+    }
+    
+    prevCompaniesLengthRef.current = companies.length;
+  }, [companies, companyOpen]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-auto">
@@ -220,10 +276,22 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               </div>
               <Select
                 value={formData.categoryId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, categoryId: value }));
+                  // Fechar o select após um pequeno delay para evitar condições de corrida
+                  setTimeout(() => {
+                    if (isMountedRef.current) {
+                      setCategoryOpen(false);
+                    }
+                  }, 50);
+                }}
                 disabled={!formData.type}
                 open={categoryOpen}
-                onOpenChange={setCategoryOpen}
+                onOpenChange={(open) => {
+                  if (isMountedRef.current) {
+                    setCategoryOpen(open);
+                  }
+                }}
               >
                 <SelectTrigger className="bg-input border-border">
                   <SelectValue placeholder={
@@ -249,9 +317,21 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 <Label htmlFor="company">Empresa</Label>
                 <Select
                   value={formData.companyId || "none"}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value === "none" ? "" : value }))}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, companyId: value === "none" ? "" : value }));
+                    // Fechar o select após um pequeno delay para evitar condições de corrida
+                    setTimeout(() => {
+                      if (isMountedRef.current) {
+                        setCompanyOpen(false);
+                      }
+                    }, 50);
+                  }}
                   open={companyOpen}
-                  onOpenChange={setCompanyOpen}
+                  onOpenChange={(open) => {
+                    if (isMountedRef.current) {
+                      setCompanyOpen(open);
+                    }
+                  }}
                 >
                   <SelectTrigger className="bg-input border-border">
                     <SelectValue placeholder="Selecione uma empresa (opcional)" />

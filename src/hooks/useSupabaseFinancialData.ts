@@ -5,7 +5,7 @@ import { Goal, GoalProgress, GoalHistory } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, parseLocalDate } from '@/lib/formatters';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -564,7 +564,7 @@ function useSupabaseFinancialDataInternal() {
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
-      .order('date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading transactions:', error);
@@ -1026,7 +1026,8 @@ function useSupabaseFinancialDataInternal() {
     
     
     const filtered = transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
+      // Usar parseLocalDate para evitar problemas de timezone
+      const transactionDate = parseLocalDate(transaction.date);
       
       // Filter by company
       if (specificFilter.companyId) {
@@ -1049,9 +1050,12 @@ function useSupabaseFinancialDataInternal() {
           return isToday(transactionDate);
         case 'month':
           if (specificFilter.month !== undefined) {
-            const targetYear = specificFilter.year || now.getFullYear();
-            return transactionDate.getFullYear() === targetYear && 
-                   transactionDate.getMonth() === specificFilter.month;
+            // Sempre usar o ano especificado no filtro, nunca o ano atual como fallback
+            const targetYear = specificFilter.year ?? now.getFullYear();
+            const transactionYear = transactionDate.getFullYear();
+            const transactionMonth = transactionDate.getMonth();
+            // Comparar ano e mês exatamente
+            return transactionYear === targetYear && transactionMonth === specificFilter.month;
           }
           return isThisMonth(transactionDate);
         case 'year':
@@ -1096,7 +1100,7 @@ function useSupabaseFinancialDataInternal() {
   const getRecentTransactions = useCallback((limit: number = 5) => {
     const filteredTransactions = getFilteredTransactions();
     return filteredTransactions
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, limit);
   }, [getFilteredTransactions]);
 
@@ -1105,15 +1109,15 @@ function useSupabaseFinancialDataInternal() {
   }, [categories]);
 
   const getAvailableYears = useCallback(() => {
-    const years = transactions.map(t => new Date(t.date).getFullYear());
+    const years = transactions.map(t => parseLocalDate(t.date).getFullYear());
     return Array.from(new Set(years)).sort((a, b) => b - a);
   }, [transactions]);
 
   const getAvailableMonths = useCallback((year?: number) => {
     const targetYear = year || new Date().getFullYear();
     const months = transactions
-      .filter(t => new Date(t.date).getFullYear() === targetYear)
-      .map(t => new Date(t.date).getMonth());
+      .filter(t => parseLocalDate(t.date).getFullYear() === targetYear)
+      .map(t => parseLocalDate(t.date).getMonth());
     return Array.from(new Set(months)).sort((a, b) => a - b);
   }, [transactions]);
 
@@ -1124,10 +1128,10 @@ function useSupabaseFinancialDataInternal() {
     
     const days = transactions
       .filter(t => {
-        const date = new Date(t.date);
+        const date = parseLocalDate(t.date);
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       })
-      .map(t => new Date(t.date).getDate());
+      .map(t => parseLocalDate(t.date).getDate());
     
     return Array.from(new Set(days)).sort((a, b) => a - b);
   }, [transactions]);
@@ -1144,9 +1148,9 @@ function useSupabaseFinancialDataInternal() {
       let periodKey = '';
       
       if (specificFilter.type === 'month') {
-        periodKey = format(new Date(transaction.date), 'yyyy-MM-dd');
+        periodKey = format(parseLocalDate(transaction.date), 'yyyy-MM-dd');
       } else if (specificFilter.type === 'year') {
-        periodKey = format(new Date(transaction.date), 'yyyy-MM');
+        periodKey = format(parseLocalDate(transaction.date), 'yyyy-MM');
       } else {
         periodKey = transaction.date;
       }

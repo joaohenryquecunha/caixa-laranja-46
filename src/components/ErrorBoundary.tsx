@@ -21,6 +21,15 @@ export class ErrorBoundary extends React.Component<Props, ErrorBoundaryState> {
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // log to console or a logging service
     console.error('ErrorBoundary caught an error', error, info);
+    
+    // Se for um erro de removeChild, tentar não quebrar a UI
+    if (error.message && error.message.includes('removeChild')) {
+      console.warn('Erro removeChild detectado no ErrorBoundary, tentando recuperar...');
+      // Resetar o estado após um pequeno delay para permitir que o DOM se estabilize
+      setTimeout(() => {
+        this.reset();
+      }, 100);
+    }
   }
 
   reset = () => {

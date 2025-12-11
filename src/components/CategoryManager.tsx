@@ -111,7 +111,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   }, {} as Record<TransactionType, typeof categories>);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
       <Card className="w-full max-w-4xl bg-gradient-card border-border shadow-card max-h-[calc(100vh-2rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex flex-col h-full min-h-0">
           <div className="p-6 border-b border-border">

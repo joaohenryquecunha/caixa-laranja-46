@@ -322,15 +322,10 @@ export function FinancialDashboard({
 
         {/* Transaction Form Modal */}
         {showTransactionForm && (
-          <ErrorBoundary onReset={() => {
+          <TransactionForm onClose={() => {
             setShowTransactionForm(false);
             setSelectedTransaction(null);
-          }}>
-            <TransactionForm onClose={() => {
-              setShowTransactionForm(false);
-              setSelectedTransaction(null);
-            }} />
-          </ErrorBoundary>
+          }} />
         )}
 
         {/* All Transactions Modal */}

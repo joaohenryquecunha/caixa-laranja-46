@@ -383,11 +383,47 @@ function useSupabaseFinancialDataInternal() {
 
     if (error) {
       console.error('Error loading categories:', error);
+      // Mesmo com erro, tentar garantir que categorias padrão existam
+      try {
+        const normalized = await synchronizeCategories([]);
+        setCategories(normalized);
+      } catch (syncError) {
+        console.error('Error synchronizing categories:', syncError);
+        setCategories([]);
+      }
       return;
     }
 
-    const normalized = await synchronizeCategories(data ?? []);
-    setCategories(normalized);
+    try {
+      const normalized = await synchronizeCategories(data ?? []);
+      // Para novos usuários, pode haver uma mudança de [] para [categorias]
+      // Usar um pequeno delay para garantir que o DOM esteja estável antes de atualizar
+      // Isso evita problemas com Portal durante re-renderizações
+      if (data && data.length === 0 && normalized.length > 0) {
+        // É um novo usuário recebendo categorias pela primeira vez
+        setTimeout(() => {
+          setCategories(normalized);
+        }, 50);
+      } else {
+        // Atualização normal
+        setCategories(normalized);
+      }
+    } catch (syncError) {
+      console.error('Error synchronizing categories:', syncError);
+      // Em caso de erro, pelo menos tentar manter as categorias existentes
+      if (data && data.length > 0) {
+        const normalized = data.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          color: cat.color,
+          icon: cat.icon || 'Circle',
+          type: cat.type as TransactionType,
+        }));
+        setCategories(normalized);
+      } else {
+        setCategories([]);
+      }
+    }
   };
 
   const synchronizeCategories = async (existing: any[]): Promise<Category[]> => {

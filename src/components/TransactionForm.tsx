@@ -102,6 +102,27 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     !formData.type || cat.type === formData.type
   );
 
+  // Refs para rastrear mudanças nas categorias
+  const prevCategoriesLengthRef = useRef(categories.length);
+  const selectKeyRef = useRef(0);
+
+  // Quando as categorias mudam (especialmente de 0 para >0 para novos usuários),
+  // forçar uma re-renderização do Select para evitar problemas com Portal
+  useEffect(() => {
+    const categoriesChanged = categories.length !== prevCategoriesLengthRef.current;
+    
+    // Se categorias foram inseridas (especialmente para novos usuários)
+    if (categoriesChanged && isMountedRef.current) {
+      // Para novos usuários: quando categorias passam de 0 para >0, forçar recriação do Select
+      if (prevCategoriesLengthRef.current === 0 && categories.length > 0) {
+        // Incrementar a key do Select para forçar recriação completa do Portal
+        selectKeyRef.current += 1;
+      }
+    }
+    
+    prevCategoriesLengthRef.current = categories.length;
+  }, [categories.length]); // Apenas observar o tamanho, não o array completo
+
   // Limpar quando o componente desmontar
   useEffect(() => {
     isMountedRef.current = true;
@@ -221,6 +242,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 )}
               </div>
               <Select
+                key={`category-select-${selectKeyRef.current}`}
                 value={formData.categoryId}
                 onValueChange={(value) => {
                   // Atualizar o valor - o Radix UI fecha automaticamente após seleção
@@ -238,11 +260,17 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCategories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      {formData.type ? "Nenhuma categoria disponível" : "Selecione o tipo primeiro"}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>

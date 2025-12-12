@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,10 +35,13 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const [recurringTimes, setRecurringTimes] = useState('12');
   const [recurringStartDate, setRecurringStartDate] = useState(new Date());
 
-  // Filtrar categorias pelo tipo selecionado
-  const filteredCategories = type 
-    ? (categories || []).filter(cat => cat?.type === type)
-    : [];
+  // Filtrar categorias pelo tipo selecionado - usar useMemo para garantir consistência
+  const filteredCategories = useMemo(() => {
+    if (!type || !categories || !Array.isArray(categories)) {
+      return [];
+    }
+    return categories.filter(cat => cat && cat.type === type);
+  }, [type, categories]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +100,27 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   };
 
   const handleTypeChange = (newType: TransactionType) => {
+    // Atualizar tipo e limpar categoria de forma síncrona
     setType(newType);
     setCategoryId(''); // Limpar categoria quando tipo muda
+  };
+
+  // Função segura para mudar categoria
+  const handleCategoryChange = (value: string) => {
+    // Validar que o tipo está selecionado e a categoria existe
+    if (!type) {
+      console.warn('Tentativa de selecionar categoria sem tipo');
+      return;
+    }
+    
+    // Verificar se a categoria existe nas categorias filtradas
+    const categoryExists = filteredCategories.some(cat => cat?.id === value);
+    if (categoryExists || !value) {
+      setCategoryId(value);
+    } else {
+      console.warn('Categoria selecionada não existe nas categorias filtradas');
+      setCategoryId('');
+    }
   };
 
   return (
@@ -194,28 +216,37 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   </Button>
                 )}
               </div>
-              <Select
-                value={categoryId || undefined}
-                onValueChange={setCategoryId}
-                disabled={!type || filteredCategories.length === 0}
-              >
-                <SelectTrigger className="bg-input border-border">
-                  <SelectValue placeholder={
-                    !type 
-                      ? "Selecione o tipo primeiro" 
-                      : filteredCategories.length === 0 
-                        ? "Nenhuma categoria disponível"
-                        : "Selecione uma categoria"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCategories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ErrorBoundary>
+                <Select
+                  key={`category-select-${type || 'none'}-${filteredCategories.length}`}
+                  value={categoryId && filteredCategories.some(cat => cat?.id === categoryId) 
+                    ? categoryId 
+                    : undefined}
+                  onValueChange={handleCategoryChange}
+                  disabled={!type || filteredCategories.length === 0}
+                >
+                  <SelectTrigger className="bg-input border-border">
+                    <SelectValue placeholder={
+                      !type 
+                        ? "Selecione o tipo primeiro" 
+                        : filteredCategories.length === 0 
+                          ? "Nenhuma categoria disponível"
+                          : "Selecione uma categoria"
+                    } />
+                  </SelectTrigger>
+                  {filteredCategories.length > 0 && (
+                    <SelectContent>
+                      {filteredCategories
+                        .filter(cat => cat && cat.id && cat.name) // Filtrar categorias inválidas
+                        .map(category => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  )}
+                </Select>
+              </ErrorBoundary>
             </div>
 
             {/* Empresa */}

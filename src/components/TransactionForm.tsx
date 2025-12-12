@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { X, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,15 +35,24 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const [recurringTimes, setRecurringTimes] = useState('12');
   const [recurringStartDate, setRecurringStartDate] = useState(new Date());
 
-  // Filtrar categorias pelo tipo selecionado
-  const filteredCategories = type 
-    ? (categories || []).filter(cat => cat?.type === type)
-    : [];
+  // Filtrar categorias pelo tipo selecionado - memoizado e seguro
+  const filteredCategories = useMemo(() => {
+    if (!type) return [];
+    if (!categories || !Array.isArray(categories)) return [];
+    return categories.filter(cat => cat && cat.type === type && cat.id && cat.name);
+  }, [type, categories]);
+
+  // Verificar se categoria selecionada ainda é válida
+  const validCategoryId = useMemo(() => {
+    if (!categoryId || !type) return undefined;
+    const exists = filteredCategories.some(cat => cat.id === categoryId);
+    return exists ? categoryId : undefined;
+  }, [categoryId, filteredCategories, type]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !categoryId || !type) {
+    if (!amount || !validCategoryId || !type) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -66,7 +75,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       addRecurringTransactions({
         amount: parseFloat(amount),
         description,
-        categoryId,
+        categoryId: validCategoryId,
         companyId: companyId || undefined,
         type,
         startDate: format(recurringStartDate, 'yyyy-MM-dd'),
@@ -81,7 +90,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       addTransaction({
         amount: parseFloat(amount),
         description,
-        categoryId,
+        categoryId: validCategoryId,
         companyId: companyId || undefined,
         type,
         date
@@ -96,10 +105,37 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     onClose();
   };
 
-  const handleTypeChange = (newType: TransactionType) => {
+  // Handler para mudança de tipo - limpa categoria e força re-render
+  const handleTypeChange = useCallback((newType: TransactionType) => {
     setType(newType);
     setCategoryId(''); // Limpar categoria quando tipo muda
-  };
+  }, []);
+
+  // Handler seguro para mudança de categoria
+  const handleCategoryChange = useCallback((value: string) => {
+    if (!type) {
+      setCategoryId('');
+      return;
+    }
+    
+    // Validar que a categoria existe
+    const categoryExists = filteredCategories.some(cat => cat.id === value);
+    if (categoryExists) {
+      setCategoryId(value);
+    } else {
+      setCategoryId('');
+    }
+  }, [type, filteredCategories]);
+
+  // Determinar placeholder e estado do select
+  const categoryPlaceholder = !type 
+    ? "Selecione o tipo primeiro" 
+    : filteredCategories.length === 0 
+      ? "Nenhuma categoria disponível"
+      : "Selecione uma categoria";
+
+  const isCategorySelectDisabled = !type || filteredCategories.length === 0;
+  const selectKey = `category-${type || 'none'}-${filteredCategories.length}`;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -195,25 +231,26 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 )}
               </div>
               <Select
-                value={categoryId || undefined}
-                onValueChange={setCategoryId}
-                disabled={!type || filteredCategories.length === 0}
+                key={selectKey}
+                value={validCategoryId}
+                onValueChange={handleCategoryChange}
+                disabled={isCategorySelectDisabled}
               >
-                <SelectTrigger className="bg-input border-border">
-                  <SelectValue placeholder={
-                    !type 
-                      ? "Selecione o tipo primeiro" 
-                      : filteredCategories.length === 0 
-                        ? "Nenhuma categoria disponível"
-                        : "Selecione uma categoria"
-                  } />
+                <SelectTrigger className="bg-input border-border" disabled={isCategorySelectDisabled}>
+                  <SelectValue placeholder={categoryPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCategories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                      {type ? "Nenhuma categoria disponível" : "Selecione o tipo primeiro"}
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>

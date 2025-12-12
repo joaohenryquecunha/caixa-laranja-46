@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Calendar as CalendarIcon, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { X, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -24,28 +24,26 @@ interface TransactionFormProps {
 export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [formData, setFormData] = useState({
-    amount: '',
-    description: '',
-    categoryId: '',
-    companyId: '',
-    type: '' as TransactionType,
-    date: format(new Date(), 'yyyy-MM-dd')
-  });
   
+  const [type, setType] = useState<TransactionType | ''>('');
+  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [companyId, setCompanyId] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringData, setRecurringData] = useState({
-    times: '12',
-    startDate: new Date()
-  });
+  const [recurringTimes, setRecurringTimes] = useState('12');
+  const [recurringStartDate, setRecurringStartDate] = useState(new Date());
 
-  // Refs para rastrear se o componente está montado e evitar condições de corrida
-  const isMountedRef = useRef(true);
+  // Filtrar categorias pelo tipo selecionado
+  const filteredCategories = type 
+    ? (categories || []).filter(cat => cat?.type === type)
+    : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.amount || !formData.categoryId || !formData.type) {
+    if (!amount || !categoryId || !type) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -55,7 +53,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     }
 
     if (isRecurring) {
-      const times = parseInt(recurringData.times);
+      const times = parseInt(recurringTimes);
       if (times < 1 || times > 60) {
         toast({
           title: "Erro",
@@ -66,13 +64,13 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       }
 
       addRecurringTransactions({
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        categoryId: formData.categoryId,
-        companyId: formData.companyId || undefined,
-        type: formData.type,
-        startDate: recurringData.startDate.toISOString().split('T')[0],
-        times: times
+        amount: parseFloat(amount),
+        description,
+        categoryId,
+        companyId: companyId || undefined,
+        type,
+        startDate: format(recurringStartDate, 'yyyy-MM-dd'),
+        times
       });
 
       toast({
@@ -81,12 +79,12 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       });
     } else {
       addTransaction({
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        categoryId: formData.categoryId,
-        companyId: formData.companyId || undefined,
-        type: formData.type,
-        date: formData.date
+        amount: parseFloat(amount),
+        description,
+        categoryId,
+        companyId: companyId || undefined,
+        type,
+        date
       });
 
       toast({
@@ -98,42 +96,14 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     onClose();
   };
 
-  const filteredCategories = categories.filter(cat => 
-    !formData.type || cat.type === formData.type
-  );
-
-  // Refs para rastrear mudanças nas categorias
-  const prevCategoriesLengthRef = useRef(categories.length);
-  const selectKeyRef = useRef(0);
-
-  // Quando as categorias mudam (especialmente de 0 para >0 para novos usuários),
-  // forçar uma re-renderização do Select para evitar problemas com Portal
-  useEffect(() => {
-    const categoriesChanged = categories.length !== prevCategoriesLengthRef.current;
-    
-    // Se categorias foram inseridas (especialmente para novos usuários)
-    if (categoriesChanged && isMountedRef.current) {
-      // Para novos usuários: quando categorias passam de 0 para >0, forçar recriação do Select
-      if (prevCategoriesLengthRef.current === 0 && categories.length > 0) {
-        // Incrementar a key do Select para forçar recriação completa do Portal
-        selectKeyRef.current += 1;
-      }
-    }
-    
-    prevCategoriesLengthRef.current = categories.length;
-  }, [categories.length]); // Apenas observar o tamanho, não o array completo
-
-  // Limpar quando o componente desmontar
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const handleTypeChange = (newType: TransactionType) => {
+    setType(newType);
+    setCategoryId(''); // Limpar categoria quando tipo muda
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-auto">
-      <Card className="w-full max-w-md bg-gradient-card border-border shadow-card max-h-[calc(100vh-4rem)] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-md bg-gradient-card border-border shadow-card">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-6">
             <h2 className="text-lg font-semibold text-foreground">
@@ -150,59 +120,42 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tipo */}
             <div className="space-y-3">
               <Label>Tipo *</Label>
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
-                  variant={formData.type === TransactionType.INCOME ? "default" : "outline"}
-                  onClick={() => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      type: TransactionType.INCOME,
-                      categoryId: ''
-                    }));
-                  }}
-                  className={`h-12 text-xs transition-all ${
-                    formData.type === TransactionType.INCOME 
-                      ? 'bg-success text-success-foreground shadow-[0_0_20px_rgba(34,197,94,0.4)]' 
-                      : 'hover:shadow-[0_0_15px_rgba(34,197,94,0.2)]'
+                  variant={type === TransactionType.INCOME ? "default" : "outline"}
+                  onClick={() => handleTypeChange(TransactionType.INCOME)}
+                  className={`h-12 text-xs ${
+                    type === TransactionType.INCOME 
+                      ? 'bg-success text-success-foreground' 
+                      : ''
                   }`}
                 >
                   Receita
                 </Button>
                 <Button
                   type="button"
-                  variant={formData.type === TransactionType.EXPENSE ? "default" : "outline"}
-                  onClick={() => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      type: TransactionType.EXPENSE,
-                      categoryId: ''
-                    }));
-                  }}
-                  className={`h-12 text-xs transition-all ${
-                    formData.type === TransactionType.EXPENSE 
-                      ? 'bg-destructive text-destructive-foreground shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
-                      : 'hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                  variant={type === TransactionType.EXPENSE ? "default" : "outline"}
+                  onClick={() => handleTypeChange(TransactionType.EXPENSE)}
+                  className={`h-12 text-xs ${
+                    type === TransactionType.EXPENSE 
+                      ? 'bg-destructive text-destructive-foreground' 
+                      : ''
                   }`}
                 >
                   Despesa
                 </Button>
                 <Button
                   type="button"
-                  variant={formData.type === TransactionType.INVESTMENT ? "default" : "outline"}
-                  onClick={() => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      type: TransactionType.INVESTMENT,
-                      categoryId: ''
-                    }));
-                  }}
-                  className={`h-12 text-xs transition-all ${
-                    formData.type === TransactionType.INVESTMENT 
-                      ? 'bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.4)]' 
-                      : 'hover:shadow-[0_0_15px_rgba(14,165,233,0.2)]'
+                  variant={type === TransactionType.INVESTMENT ? "default" : "outline"}
+                  onClick={() => handleTypeChange(TransactionType.INVESTMENT)}
+                  className={`h-12 text-xs ${
+                    type === TransactionType.INVESTMENT 
+                      ? 'bg-sky-500 text-white' 
+                      : ''
                   }`}
                 >
                   Investimento
@@ -210,6 +163,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               </div>
             </div>
 
+            {/* Valor */}
             <div className="space-y-2">
               <Label htmlFor="amount">Valor *</Label>
               <Input
@@ -217,23 +171,22 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 type="number"
                 step="0.01"
                 placeholder="0,00"
-                value={formData.amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
                 className="bg-input border-border"
               />
             </div>
 
+            {/* Categoria */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="category">Categoria *</Label>
-                {formData.type && filteredCategories.length === 0 && (
+                {type && filteredCategories.length === 0 && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setShowCategoryManager(true);
-                    }}
+                    onClick={() => setShowCategoryManager(true)}
                     className="text-xs text-primary hover:text-primary/80"
                   >
                     <Plus className="mr-1 h-3 w-3" />
@@ -242,48 +195,36 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 )}
               </div>
               <Select
-                key={`category-select-${selectKeyRef.current}`}
-                value={formData.categoryId}
-                onValueChange={(value) => {
-                  // Atualizar o valor - o Radix UI fecha automaticamente após seleção
-                  setFormData(prev => ({ ...prev, categoryId: value }));
-                }}
-                disabled={!formData.type}
+                value={categoryId || undefined}
+                onValueChange={setCategoryId}
+                disabled={!type || filteredCategories.length === 0}
               >
                 <SelectTrigger className="bg-input border-border">
                   <SelectValue placeholder={
-                    !formData.type 
+                    !type 
                       ? "Selecione o tipo primeiro" 
                       : filteredCategories.length === 0 
-                        ? "Nenhuma categoria disponível - Crie uma nova"
+                        ? "Nenhuma categoria disponível"
                         : "Selecione uma categoria"
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCategories.length > 0 ? (
-                    filteredCategories.map(category => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="" disabled>
-                      {formData.type ? "Nenhuma categoria disponível" : "Selecione o tipo primeiro"}
+                  {filteredCategories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {companies.length > 0 && (
+            {/* Empresa */}
+            {companies && companies.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa</Label>
                 <Select
-                  value={formData.companyId || "none"}
-                  onValueChange={(value) => {
-                    // Atualizar o valor - o Radix UI fecha automaticamente após seleção
-                    setFormData(prev => ({ ...prev, companyId: value === "none" ? "" : value }));
-                  }}
+                  value={companyId || "none"}
+                  onValueChange={(value) => setCompanyId(value === "none" ? "" : value)}
                 >
                   <SelectTrigger className="bg-input border-border">
                     <SelectValue placeholder="Selecione uma empresa (opcional)" />
@@ -300,62 +241,20 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               </div>
             )}
 
+            {/* Descrição */}
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>
               <Textarea
                 id="description"
                 placeholder="Descrição da transação..."
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 className="bg-input border-border resize-none"
                 rows={3}
               />
             </div>
 
-            {isRecurring && (
-              <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/50 rounded-lg border border-border">
-                <div className="space-y-2">
-                  <Label htmlFor="times">Quantidade de vezes *</Label>
-                  <Input
-                    id="times"
-                    type="number"
-                    min="1"
-                    max="60"
-                    placeholder="12"
-                    value={recurringData.times}
-                    onChange={(e) => setRecurringData(prev => ({ ...prev, times: e.target.value }))}
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Início *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal bg-input border-border",
-                          !recurringData.startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {recurringData.startDate ? format(recurringData.startDate, "dd MMM yyyy", { locale: ptBR }) : "Selecione a data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={recurringData.startDate}
-                        onSelect={(date) => date && setRecurringData(prev => ({ ...prev, startDate: date }))}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            )}
-
+            {/* Transação Recorrente */}
             <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
               <div>
                 <p className="text-sm font-medium text-foreground">Transação recorrente</p>
@@ -374,18 +273,65 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               </Button>
             </div>
 
+            {/* Campos de Recorrencia */}
+            {isRecurring && (
+              <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/50 rounded-lg border border-border">
+                <div className="space-y-2">
+                  <Label htmlFor="times">Quantidade de vezes *</Label>
+                  <Input
+                    id="times"
+                    type="number"
+                    min="1"
+                    max="60"
+                    placeholder="12"
+                    value={recurringTimes}
+                    onChange={(e) => setRecurringTimes(e.target.value)}
+                    className="bg-input border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data inicial *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal bg-input border-border",
+                          !recurringStartDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {recurringStartDate ? format(recurringStartDate, "dd MMM yyyy", { locale: ptBR }) : "Selecione a data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={recurringStartDate}
+                        onSelect={(date) => date && setRecurringStartDate(date)}
+                        initialFocus
+                        className="p-3"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
+
+            {/* Data */}
             <div className="space-y-2">
               <Label htmlFor="date">Data {isRecurring ? "(será ignorada)" : "*"}</Label>
               <Input
                 id="date"
                 type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 className="bg-input border-border"
                 disabled={isRecurring}
               />
             </div>
 
+            {/* Botões */}
             <div className="flex gap-3 pt-4">
               <Button
                 type="button"
@@ -400,7 +346,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 variant="gradient"
                 className="flex-1"
               >
-                {isRecurring ? `Criar ${recurringData.times} Transações` : 'Adicionar'}
+                {isRecurring ? `Criar ${recurringTimes} Transações` : 'Adicionar'}
               </Button>
             </div>
           </form>

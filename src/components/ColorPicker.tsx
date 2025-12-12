@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,16 +39,29 @@ export function ColorPicker({ value, onChange, label = "Cor" }: ColorPickerProps
   const [customColor, setCustomColor] = useState(value);
   const [open, setOpen] = useState(false);
 
+  // Sincronizar customColor quando value mudar externamente
+  React.useEffect(() => {
+    setCustomColor(value);
+  }, [value]);
+
   const handleColorSelect = (color: string) => {
-    onChange(color);
-    setCustomColor(color);
-    setOpen(false);
+    try {
+      onChange(color);
+      setCustomColor(color);
+      setOpen(false);
+    } catch (error) {
+      console.error('Erro ao selecionar cor:', error);
+    }
   };
 
   const handleCustomColorSubmit = () => {
-    if (customColor && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customColor)) {
-      onChange(customColor);
-      setOpen(false);
+    try {
+      if (customColor && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customColor)) {
+        onChange(customColor);
+        setOpen(false);
+      }
+    } catch (error) {
+      console.error('Erro ao aplicar cor personalizada:', error);
     }
   };
 
@@ -57,18 +71,28 @@ export function ColorPicker({ value, onChange, label = "Cor" }: ColorPickerProps
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            type="button"
             variant="outline"
             className="w-full justify-start gap-2 bg-input border-border"
           >
             <div
-              className="w-4 h-4 rounded-full border border-border"
+              className="w-4 h-4 rounded-full border border-border flex-shrink-0"
               style={{ backgroundColor: value }}
             />
-            <Palette className="h-4 w-4" />
-            Selecionar cor
+            <Palette className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Selecionar cor</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 bg-popover border-border" align="start">
+        <PopoverContent 
+          className="w-96 bg-popover border-border z-[110]" 
+          align="start"
+          side="bottom"
+          sideOffset={8}
+          onOpenAutoFocus={(e) => {
+            // Prevenir foco automático que pode causar problemas
+            e.preventDefault();
+          }}
+        >
           <div className="space-y-4 max-h-80 overflow-y-auto">
             <div>
               <Label className="text-sm font-medium mb-3 block">Paleta de Cores</Label>

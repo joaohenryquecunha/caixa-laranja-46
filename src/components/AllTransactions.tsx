@@ -59,7 +59,7 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
   });
 
   const sortedTransactions = useMemo(
-    () => [...filteredTransactions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    () => [...filteredTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [filteredTransactions]
   );
 

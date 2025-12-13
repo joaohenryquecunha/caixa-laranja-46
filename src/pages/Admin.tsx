@@ -7,11 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { differenceInDays, format, formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Shield, ShieldOff, Search } from 'lucide-react';
+import { ArrowLeft, Shield, ShieldOff } from 'lucide-react';
 
 interface UserData {
   id: string;
@@ -33,7 +32,6 @@ export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const checkedRef = useRef(false);
   const loadingUsersRef = useRef(false);
 
@@ -247,20 +245,9 @@ export default function Admin() {
     return { label: 'Pendente', variant: 'outline' as const };
   };
 
-  const filteredAndSortedUsers = useMemo(() => {
-    let filtered = users;
-    
-    // Filtrar por nome se houver termo de busca
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase().trim();
-      filtered = users.filter(user => 
-        user.name.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Ordenar por nome
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  }, [users, searchTerm]);
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => a.name.localeCompare(b.name));
+  }, [users]);
 
   if (loading) {
     return (
@@ -289,24 +276,10 @@ export default function Admin() {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle>Usuários</CardTitle>
-                <CardDescription>
-                  Total de {filteredAndSortedUsers.length} {searchTerm ? 'usuários encontrados' : 'usuários cadastrados'}
-                  {searchTerm && users.length !== filteredAndSortedUsers.length && ` de ${users.length}`}
-                </CardDescription>
-              </div>
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Buscar por nome..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-input border-border"
-                />
-              </div>
-            </div>
+            <CardTitle>Usuários</CardTitle>
+            <CardDescription>
+              Total de {sortedUsers.length} usuários cadastrados
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="hidden lg:block">
@@ -326,7 +299,7 @@ export default function Admin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAndSortedUsers.map(user => {
+                  {sortedUsers.map(user => {
                     const accessStatus = getAccessStatus(user);
                     return (
                       <TableRow key={user.id}>
@@ -381,7 +354,7 @@ export default function Admin() {
             </div>
 
             <div className="grid gap-4 p-4 lg:hidden">
-              {filteredAndSortedUsers.map(user => {
+              {sortedUsers.map(user => {
                 const accessStatus = getAccessStatus(user);
                 return (
                   <Card key={user.id} className="bg-card border-border">

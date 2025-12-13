@@ -15,34 +15,11 @@ export class ErrorBoundary extends React.Component<Props, ErrorBoundaryState> {
   }
 
   static getDerivedStateFromError(error: Error) {
-    // Ignorar erros de removeChild - não devem quebrar a UI
-    // O global error handler já está tratando esses erros
-    if (error.message && error.message.includes('removeChild')) {
-      console.warn('ErrorBoundary ignorando erro removeChild (já tratado pelo global handler)');
-      return { hasError: false, error: null };
-    }
-    
-    // Ignorar NotFoundError relacionados a removeChild
-    if (error.name === 'NotFoundError' && error.message && error.message.includes('removeChild')) {
-      console.warn('ErrorBoundary ignorando NotFoundError removeChild (já tratado pelo global handler)');
-      return { hasError: false, error: null };
-    }
-    
-    // Para outros erros, capturar normalmente
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Se for um erro de removeChild, não fazer nada (já ignorado no getDerivedStateFromError)
-    if (error.message && error.message.includes('removeChild')) {
-      return; // Não fazer nada, já foi ignorado
-    }
-    
-    if (error.name === 'NotFoundError' && error.message && error.message.includes('removeChild')) {
-      return; // Não fazer nada, já foi ignorado
-    }
-    
-    // log to console apenas para erros reais
+    // log to console or a logging service
     console.error('ErrorBoundary caught an error', error, info);
   }
 

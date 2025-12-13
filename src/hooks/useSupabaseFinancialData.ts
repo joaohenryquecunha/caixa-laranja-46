@@ -5,7 +5,7 @@ import { Goal, GoalProgress, GoalHistory } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
-import { formatCurrency, parseLocalDate } from '@/lib/formatters';
+import { formatCurrency } from '@/lib/formatters';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -383,47 +383,11 @@ function useSupabaseFinancialDataInternal() {
 
     if (error) {
       console.error('Error loading categories:', error);
-      // Mesmo com erro, tentar garantir que categorias padrão existam
-      try {
-        const normalized = await synchronizeCategories([]);
-        setCategories(normalized);
-      } catch (syncError) {
-        console.error('Error synchronizing categories:', syncError);
-        setCategories([]);
-      }
       return;
     }
 
-    try {
-      const normalized = await synchronizeCategories(data ?? []);
-      // Para novos usuários, pode haver uma mudança de [] para [categorias]
-      // Usar um pequeno delay para garantir que o DOM esteja estável antes de atualizar
-      // Isso evita problemas com Portal durante re-renderizações
-      if (data && data.length === 0 && normalized.length > 0) {
-        // É um novo usuário recebendo categorias pela primeira vez
-        setTimeout(() => {
-          setCategories(normalized);
-        }, 50);
-      } else {
-        // Atualização normal
-        setCategories(normalized);
-      }
-    } catch (syncError) {
-      console.error('Error synchronizing categories:', syncError);
-      // Em caso de erro, pelo menos tentar manter as categorias existentes
-      if (data && data.length > 0) {
-        const normalized = data.map((cat: any) => ({
-          id: cat.id,
-          name: cat.name,
-          color: cat.color,
-          icon: cat.icon || 'Circle',
-          type: cat.type as TransactionType,
-        }));
-        setCategories(normalized);
-      } else {
-        setCategories([]);
-      }
-    }
+    const normalized = await synchronizeCategories(data ?? []);
+    setCategories(normalized);
   };
 
   const synchronizeCategories = async (existing: any[]): Promise<Category[]> => {
@@ -600,7 +564,7 @@ function useSupabaseFinancialDataInternal() {
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('date', { ascending: false });
 
     if (error) {
       console.error('Error loading transactions:', error);
@@ -1062,8 +1026,7 @@ function useSupabaseFinancialDataInternal() {
     
     
     const filtered = transactions.filter(transaction => {
-      // Usar parseLocalDate para evitar problemas de timezone
-      const transactionDate = parseLocalDate(transaction.date);
+      const transactionDate = new Date(transaction.date);
       
       // Filter by company
       if (specificFilter.companyId) {
@@ -1086,12 +1049,9 @@ function useSupabaseFinancialDataInternal() {
           return isToday(transactionDate);
         case 'month':
           if (specificFilter.month !== undefined) {
-            // Sempre usar o ano especificado no filtro, nunca o ano atual como fallback
-            const targetYear = specificFilter.year ?? now.getFullYear();
-            const transactionYear = transactionDate.getFullYear();
-            const transactionMonth = transactionDate.getMonth();
-            // Comparar ano e mês exatamente
-            return transactionYear === targetYear && transactionMonth === specificFilter.month;
+            const targetYear = specificFilter.year || now.getFullYear();
+            return transactionDate.getFullYear() === targetYear && 
+                   transactionDate.getMonth() === specificFilter.month;
           }
           return isThisMonth(transactionDate);
         case 'year':
@@ -1136,7 +1096,7 @@ function useSupabaseFinancialDataInternal() {
   const getRecentTransactions = useCallback((limit: number = 5) => {
     const filteredTransactions = getFilteredTransactions();
     return filteredTransactions
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, limit);
   }, [getFilteredTransactions]);
 
@@ -1145,15 +1105,15 @@ function useSupabaseFinancialDataInternal() {
   }, [categories]);
 
   const getAvailableYears = useCallback(() => {
-    const years = transactions.map(t => parseLocalDate(t.date).getFullYear());
+    const years = transactions.map(t => new Date(t.date).getFullYear());
     return Array.from(new Set(years)).sort((a, b) => b - a);
   }, [transactions]);
 
   const getAvailableMonths = useCallback((year?: number) => {
     const targetYear = year || new Date().getFullYear();
     const months = transactions
-      .filter(t => parseLocalDate(t.date).getFullYear() === targetYear)
-      .map(t => parseLocalDate(t.date).getMonth());
+      .filter(t => new Date(t.date).getFullYear() === targetYear)
+      .map(t => new Date(t.date).getMonth());
     return Array.from(new Set(months)).sort((a, b) => a - b);
   }, [transactions]);
 
@@ -1164,10 +1124,10 @@ function useSupabaseFinancialDataInternal() {
     
     const days = transactions
       .filter(t => {
-        const date = parseLocalDate(t.date);
+        const date = new Date(t.date);
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       })
-      .map(t => parseLocalDate(t.date).getDate());
+      .map(t => new Date(t.date).getDate());
     
     return Array.from(new Set(days)).sort((a, b) => a - b);
   }, [transactions]);
@@ -1184,9 +1144,9 @@ function useSupabaseFinancialDataInternal() {
       let periodKey = '';
       
       if (specificFilter.type === 'month') {
-        periodKey = format(parseLocalDate(transaction.date), 'yyyy-MM-dd');
+        periodKey = format(new Date(transaction.date), 'yyyy-MM-dd');
       } else if (specificFilter.type === 'year') {
-        periodKey = format(parseLocalDate(transaction.date), 'yyyy-MM');
+        periodKey = format(new Date(transaction.date), 'yyyy-MM');
       } else {
         periodKey = transaction.date;
       }

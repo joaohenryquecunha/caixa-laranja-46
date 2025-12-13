@@ -44,30 +44,21 @@ serve(async (req) => {
       logStep("Found existing customer", { customerId });
     }
 
-    // Verificar se estamos em modo de teste ou produção
-    const isTestMode = Deno.env.get("STRIPE_SECRET_KEY")?.startsWith("sk_test_");
-    logStep("Stripe mode", { isTestMode });
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1Scaj4QRZLAnntSYwWfjOiPn",
+          price: "price_1SHskPKMIwOIZaIBrU0wHn3o",
           quantity: 1,
         },
       ],
       mode: "subscription",
-      allow_promotion_codes: true,
       success_url: `${req.headers.get("origin")}/`,
       cancel_url: `${req.headers.get("origin")}/`,
     });
 
-    logStep("Checkout session created", { 
-      sessionId: session.id, 
-      url: session.url,
-      allowPromotionCodes: true 
-    });
+    logStep("Checkout session created", { sessionId: session.id });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

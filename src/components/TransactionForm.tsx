@@ -46,12 +46,33 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const [recurringTimes, setRecurringTimes] = useState('12');
   const [recurringStartDate, setRecurringStartDate] = useState(new Date());
 
-  // Filtrar categorias pelo tipo selecionado - memoizado e seguro
+  // Filtrar categorias pelo tipo selecionado - memoizado e seguro com validação robusta
   const filteredCategories = useMemo(() => {
     if (!type) return [];
-    if (!categories || !Array.isArray(categories)) return [];
-    return categories.filter(cat => cat && cat.type === type && cat.id && cat.name);
-  }, [type, categories]);
+    if (!safeCategories || safeCategories.length === 0) return [];
+    
+    try {
+      return safeCategories
+        .filter(cat => {
+          // Validação robusta de categoria
+          if (!cat || typeof cat !== 'object') return false;
+          if (!cat.id || typeof cat.id !== 'string') return false;
+          if (!cat.name || typeof cat.name !== 'string') return false;
+          if (cat.type !== type) return false;
+          return true;
+        })
+        .map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          type: cat.type,
+          color: cat.color || '#6b7280',
+          icon: cat.icon || 'Tag'
+        }));
+    } catch (error) {
+      console.error('Error filtering categories:', error);
+      return [];
+    }
+  }, [type, safeCategories]);
 
   // Verificar se categoria selecionada ainda é válida
   const validCategoryId = useMemo(() => {
@@ -63,7 +84,6 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !validCategoryId || !type) {
     if (!amount || !validCategoryId || !type) {
       toast({
         title: "Erro",
@@ -87,8 +107,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       addRecurringTransactions({
         amount: parseFloat(amount),
         description,
-        categoryId: validCategoryId,
-        categoryId: validCategoryId,
+        categoryId: validCategoryId!,
         companyId: companyId || undefined,
         type,
         startDate: format(recurringStartDate, 'yyyy-MM-dd'),
@@ -103,8 +122,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       addTransaction({
         amount: parseFloat(amount),
         description,
-        categoryId: validCategoryId,
-        categoryId: validCategoryId,
+        categoryId: validCategoryId!,
         companyId: companyId || undefined,
         type,
         date
@@ -121,37 +139,8 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
   // Handler para mudança de tipo - limpa categoria e força re-render
   const handleTypeChange = useCallback((newType: TransactionType) => {
-  // Handler para mudança de tipo - limpa categoria e força re-render
-  const handleTypeChange = useCallback((newType: TransactionType) => {
     setType(newType);
     setCategoryId(''); // Limpar categoria quando tipo muda
-  }, []);
-
-  // Handler seguro para mudança de categoria
-  const handleCategoryChange = useCallback((value: string) => {
-    if (!type) {
-      setCategoryId('');
-      return;
-    }
-    
-    // Validar que a categoria existe
-    const categoryExists = filteredCategories.some(cat => cat.id === value);
-    if (categoryExists) {
-      setCategoryId(value);
-    } else {
-      setCategoryId('');
-    }
-  }, [type, filteredCategories]);
-
-  // Determinar placeholder e estado do select
-  const categoryPlaceholder = !type 
-    ? "Selecione o tipo primeiro" 
-    : filteredCategories.length === 0 
-      ? "Nenhuma categoria disponível"
-      : "Selecione uma categoria";
-
-  const isCategorySelectDisabled = !type || filteredCategories.length === 0;
-  const selectKey = `category-${type || 'none'}-${filteredCategories.length}`;
   }, []);
 
   // Handler seguro para mudança de categoria
@@ -278,28 +267,11 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 value={validCategoryId}
                 onValueChange={handleCategoryChange}
                 disabled={isCategorySelectDisabled}
-                key={selectKey}
-                value={validCategoryId}
-                onValueChange={handleCategoryChange}
-                disabled={isCategorySelectDisabled}
               >
-                <SelectTrigger className="bg-input border-border" disabled={isCategorySelectDisabled}>
-                  <SelectValue placeholder={categoryPlaceholder} />
                 <SelectTrigger className="bg-input border-border" disabled={isCategorySelectDisabled}>
                   <SelectValue placeholder={categoryPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCategories.length > 0 ? (
-                    filteredCategories.map(category => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
-                      {type ? "Nenhuma categoria disponível" : "Selecione o tipo primeiro"}
-                    </div>
-                  )}
                   {filteredCategories.length > 0 ? (
                     filteredCategories.map(category => (
                       <SelectItem key={category.id} value={category.id}>

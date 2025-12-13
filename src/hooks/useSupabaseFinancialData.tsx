@@ -612,7 +612,7 @@ function useSupabaseFinancialDataInternal() {
       return;
     }
 
-    setTransactions(data.map(tx => ({
+    const mappedTransactions = data.map(tx => ({
       id: tx.id,
       amount: Number(tx.amount),
       description: tx.description,
@@ -621,7 +621,18 @@ function useSupabaseFinancialDataInternal() {
       type: tx.type as TransactionType,
       date: tx.date,
       createdAt: tx.created_at
-    })));
+    }));
+    
+    // Debug: verificar se created_at está sendo retornado
+    if (mappedTransactions.length > 0) {
+      console.log('Primeira transação mapeada:', {
+        id: mappedTransactions[0].id,
+        createdAt: mappedTransactions[0].createdAt,
+        created_at_original: data[0]?.created_at
+      });
+    }
+    
+    setTransactions(mappedTransactions);
   };
 
   const loadGoals = async () => {

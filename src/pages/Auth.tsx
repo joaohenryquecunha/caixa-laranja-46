@@ -28,10 +28,14 @@ export default function Auth() {
     setIsLoading(true);
     
     try {
+      // Garantir que o redirectTo use a origem atual (local ou produção)
+      const redirectTo = `${window.location.origin}/`;
+      console.log('Redirecting to:', redirectTo); // Debug
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: redirectTo,
           queryParams: {
             prompt: 'select_account'
           }

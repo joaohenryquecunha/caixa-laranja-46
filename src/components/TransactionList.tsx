@@ -81,6 +81,25 @@ export function TransactionList({
         const category = getCategoryById(transaction.categoryId);
         const colorClass = getTransactionColor(transaction.type);
         const sign = getAmountSign(transaction.type);
+        
+        // Formatar hora de criação
+        let timeStr = '';
+        if (transaction.createdAt) {
+          try {
+            const date = new Date(transaction.createdAt);
+            if (!isNaN(date.getTime())) {
+              timeStr = date.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+              });
+            } else {
+              console.warn('Data inválida para transaction:', transaction.id, 'createdAt:', transaction.createdAt);
+            }
+          } catch (e) {
+            console.error('Erro ao formatar hora:', e, 'transaction:', transaction);
+          }
+        }
 
         return (
           <div
@@ -107,7 +126,11 @@ export function TransactionList({
                   {transaction.description || category?.name}
                 </p>
                 <p className="text-sm text-muted-foreground transition-colors duration-200">
-                  {category?.name} • {formatDate(transaction.date)}
+                  {category?.name}
+                </p>
+                <p className="text-sm text-muted-foreground transition-colors duration-200">
+                  {formatDate(transaction.date)}
+                  {timeStr && ` às ${timeStr}`}
                 </p>
               </div>
             </div>

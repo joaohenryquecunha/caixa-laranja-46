@@ -338,16 +338,22 @@ function useSupabaseFinancialDataInternal() {
     };
   }, [user]);
 
-  // Update goal progress when transactions change
+  // Update goal progress when transactions change - com debounce para evitar muitas requisições
   useEffect(() => {
     if (!user || goals.length === 0) return;
     
-    goals.forEach(goal => {
-      if (!goal.completed) {
-        updateGoalProgressInDB(goal.id);
-      }
-    });
-  }, [transactions, goals.length, user]);
+    // Debounce para evitar atualizações excessivas
+    const timeoutId = setTimeout(() => {
+      goals.forEach(goal => {
+        if (!goal.completed && goal.mode === 'automatic') {
+          updateGoalProgressInDB(goal.id);
+        }
+      });
+    }, 500); // Aguardar 500ms após última mudança antes de atualizar
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions.length, goals.length, user]); // Usar transactions.length para evitar atualizações excessivas
 
   const loadData = async () => {
     if (!user) return;
@@ -376,115 +382,150 @@ function useSupabaseFinancialDataInternal() {
   const loadCategories = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('user_id', user.id);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id);
 
-    if (error) {
-      console.error('Error loading categories:', error);
-      return;
+      if (error) {
+        console.error('Error loading categories:', error);
+        // Se houver erro, ainda tentar usar categorias padrão
+        try {
+          const normalized = await synchronizeCategories([]);
+          setCategories(normalized);
+        } catch (syncError) {
+          console.error('Error synchronizing categories:', syncError);
+          setCategories([]);
+        }
+        return;
+      }
+
+      // Sincronizar categorias apenas se necessário
+      const normalized = await synchronizeCategories(data ?? []);
+      setCategories(normalized);
+    } catch (err) {
+      console.error('Error in loadCategories:', err);
+      setCategories([]);
     }
-
-    const normalized = await synchronizeCategories(data ?? []);
-    setCategories(normalized);
   };
 
   const synchronizeCategories = async (existing: any[]): Promise<Category[]> => {
     if (!user) return [];
 
-    const keyFor = (type: string, name: string) => `${type}:${name.trim().toLowerCase()}`;
-    const map = new Map<string, any[]>();
+    try {
+      const keyFor = (type: string, name: string) => `${type}:${name.trim().toLowerCase()}`;
+      const map = new Map<string, any[]>();
 
-    for (const cat of existing) {
-      const key = keyFor(cat.type, cat.name);
-      const list = map.get(key) ?? [];
-      list.push(cat);
-      map.set(key, list);
-    }
+      for (const cat of existing) {
+        if (!cat || !cat.id || !cat.name || !cat.type) continue; // Filtrar categorias inválidas
+        const key = keyFor(cat.type, cat.name);
+        const list = map.get(key) ?? [];
+        list.push(cat);
+        map.set(key, list);
+      }
 
-    const toDelete: string[] = [];
-    const keep: Category[] = [];
-    const toInsert: Omit<Category, 'id'>[] = [];
+      const toDelete: string[] = [];
+      const keep: Category[] = [];
+      const toInsert: Omit<Category, 'id'>[] = [];
 
-    const toCategory = (cat: any): Category => ({
-      id: cat.id,
-      name: cat.name,
-      color: cat.color,
-      icon: cat.icon,
-      type: cat.type as TransactionType,
-    });
+      const toCategory = (cat: any): Category => ({
+        id: cat.id,
+        name: cat.name,
+        color: cat.color || '#6b7280',
+        icon: cat.icon || 'Tag',
+        type: cat.type as TransactionType,
+      });
 
-    for (const required of DEFAULT_CATEGORIES) {
-      const key = keyFor(required.type, required.name);
-      const matches = map.get(key);
+      for (const required of DEFAULT_CATEGORIES) {
+        const key = keyFor(required.type, required.name);
+        const matches = map.get(key);
 
-      if (matches && matches.length > 0) {
-        const primary = matches.shift()!;
-        keep.push(toCategory(primary));
+        if (matches && matches.length > 0) {
+          const primary = matches.shift()!;
+          keep.push(toCategory(primary));
 
-        if (matches.length > 0) {
-          matches.forEach((duplicate) => toDelete.push(duplicate.id));
+          // Remover duplicatas apenas se houver mais de uma
+          if (matches.length > 0) {
+            matches.forEach((duplicate) => toDelete.push(duplicate.id));
+          }
+
+          map.delete(key);
+        } else {
+          toInsert.push(required);
         }
-
-        map.delete(key);
-      } else {
-        toInsert.push(required);
       }
-    }
 
-    for (const remaining of map.values()) {
-      if (remaining.length > 0) {
-        const [first, ...duplicates] = remaining;
-        keep.push(toCategory(first));
-        duplicates.forEach((dup) => toDelete.push(dup.id));
+      for (const remaining of map.values()) {
+        if (remaining.length > 0) {
+          const [first, ...duplicates] = remaining;
+          keep.push(toCategory(first));
+          // Remover duplicatas apenas se houver mais de uma
+          duplicates.forEach((dup) => toDelete.push(dup.id));
+        }
       }
-    }
 
-    if (toDelete.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('categories')
-        .delete()
-        .in('id', toDelete);
+      // Executar operações de delete e insert apenas se necessário e em lote
+      if (toDelete.length > 0) {
+        // Fazer delete em lotes para evitar muitos requests
+        const batchSize = 50;
+        for (let i = 0; i < toDelete.length; i += batchSize) {
+          const batch = toDelete.slice(i, i + batchSize);
+          const { error: deleteError } = await supabase
+            .from('categories')
+            .delete()
+            .in('id', batch);
 
-      if (deleteError) {
-        console.error('Error deleting extra categories:', deleteError);
+          if (deleteError) {
+            console.error('Error deleting extra categories:', deleteError);
+          }
+        }
       }
-    }
 
-    let insertedCategories: Category[] = [];
-    if (toInsert.length > 0) {
-      const payload = toInsert.map((cat) => ({
-        ...cat,
-        user_id: user.id,
+      let insertedCategories: Category[] = [];
+      if (toInsert.length > 0) {
+        const payload = toInsert.map((cat) => ({
+          ...cat,
+          user_id: user.id,
+        }));
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('categories')
+          .insert(payload)
+          .select();
+
+        if (insertError) {
+          console.error('Error inserting required categories:', insertError);
+        } else if (inserted) {
+          insertedCategories = inserted.map(toCategory);
+        }
+      }
+
+      const finalCategories = [...keep, ...insertedCategories];
+      const typeOrder = [
+        TransactionType.INCOME,
+        TransactionType.EXPENSE,
+        TransactionType.INVESTMENT,
+      ];
+
+      finalCategories.sort((a, b) => {
+        const typeDiff = typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
+        if (typeDiff !== 0) return typeDiff;
+        return a.name.localeCompare(b.name);
+      });
+
+      return finalCategories;
+    } catch (error) {
+      console.error('Error in synchronizeCategories:', error);
+      // Retornar categorias existentes mesmo em caso de erro
+      return existing.filter(cat => cat && cat.id && cat.name && cat.type).map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        color: cat.color || '#6b7280',
+        icon: cat.icon || 'Tag',
+        type: cat.type as TransactionType,
       }));
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('categories')
-        .insert(payload)
-        .select();
-
-      if (insertError) {
-        console.error('Error inserting required categories:', insertError);
-      } else if (inserted) {
-        insertedCategories = inserted.map(toCategory);
-      }
     }
-
-    const finalCategories = [...keep, ...insertedCategories];
-    const typeOrder = [
-      TransactionType.INCOME,
-      TransactionType.EXPENSE,
-      TransactionType.INVESTMENT,
-    ];
-
-    finalCategories.sort((a, b) => {
-      const typeDiff = typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
-      if (typeDiff !== 0) return typeDiff;
-      return a.name.localeCompare(b.name);
-    });
-
-    return finalCategories;
   };
 
   const ensureMetaCategory = useCallback(async (): Promise<Category> => {
@@ -1506,50 +1547,60 @@ function useSupabaseFinancialDataInternal() {
     if (goal.mode === 'manual') {
       return;
     }
-    // Calculate transactions since goal creation (by creation timestamp, not financial date)
-    const goalCreationDate = parseISO(goal.createdAt);
-    const relevantTransactions = transactions.filter(transaction => 
-      parseISO(transaction.createdAt) >= goalCreationDate
-    );
-
-    // Calculate progress based on transactions
-    let progressChange = 0;
-    relevantTransactions.forEach(transaction => {
-      if (transaction.type === 'income') {
-        progressChange += transaction.amount;
-      } else if (transaction.type === 'expense' || transaction.type === 'investment') {
-        progressChange -= transaction.amount;
-      }
-    });
-
-    const newProgress = Math.max(0, goal.initialBalance + progressChange);
     
-    // Update in database
-    const { error } = await supabase
-      .from('goals')
-      .update({ current_progress: newProgress })
-      .eq('id', goalId)
-      .eq('user_id', user.id);
+    try {
+      // Calculate transactions since goal creation (by creation timestamp, not financial date)
+      const goalCreationDate = parseISO(goal.createdAt);
+      const relevantTransactions = transactions.filter(transaction => 
+        transaction && transaction.createdAt && parseISO(transaction.createdAt) >= goalCreationDate
+      );
 
-    if (error) {
-      console.error('❌ Erro ao atualizar progresso da meta:', error);
-      return;
-    }
+      // Calculate progress based on transactions
+      let progressChange = 0;
+      relevantTransactions.forEach(transaction => {
+        if (transaction.type === 'income') {
+          progressChange += transaction.amount;
+        } else if (transaction.type === 'expense' || transaction.type === 'investment') {
+          progressChange -= transaction.amount;
+        }
+      });
 
-    setGoals((prev) =>
-      prev.map((g) =>
-        g.id === goalId
-          ? {
-              ...g,
-              currentProgress: newProgress,
-            }
-          : g
-      )
-    );
+      const newProgress = Math.max(0, goal.initialBalance + progressChange);
+      
+      // Só atualizar se houver mudança significativa (evitar updates desnecessários)
+      if (Math.abs(newProgress - goal.currentProgress) < 0.01) {
+        return;
+      }
+      
+      // Update in database
+      const { error } = await supabase
+        .from('goals')
+        .update({ current_progress: newProgress })
+        .eq('id', goalId)
+        .eq('user_id', user.id);
 
-    // Check if goal is completed
-    if (newProgress >= goal.targetAmount && !goal.completed) {
-      await completeGoal(goalId);
+      if (error) {
+        console.error('❌ Erro ao atualizar progresso da meta:', error);
+        return;
+      }
+
+      setGoals((prev) =>
+        prev.map((g) =>
+          g.id === goalId
+            ? {
+                ...g,
+                currentProgress: newProgress,
+              }
+            : g
+        )
+      );
+
+      // Check if goal is completed
+      if (newProgress >= goal.targetAmount && !goal.completed) {
+        await completeGoal(goalId);
+      }
+    } catch (error) {
+      console.error('Error in updateGoalProgressInDB:', error);
     }
   }, [user, goals, transactions, completeGoal]);
 

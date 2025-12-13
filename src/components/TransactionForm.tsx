@@ -25,6 +25,17 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   
+  // Garantir que categories e companies sempre sejam arrays válidos
+  const safeCategories = useMemo(() => {
+    if (!categories || !Array.isArray(categories)) return [];
+    return categories;
+  }, [categories]);
+  
+  const safeCompanies = useMemo(() => {
+    if (!companies || !Array.isArray(companies)) return [];
+    return companies;
+  }, [companies]);
+  
   const [type, setType] = useState<TransactionType | ''>('');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -35,12 +46,33 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const [recurringTimes, setRecurringTimes] = useState('12');
   const [recurringStartDate, setRecurringStartDate] = useState(new Date());
 
-  // Filtrar categorias pelo tipo selecionado - memoizado e seguro
+  // Filtrar categorias pelo tipo selecionado - memoizado e seguro com validação robusta
   const filteredCategories = useMemo(() => {
     if (!type) return [];
-    if (!categories || !Array.isArray(categories)) return [];
-    return categories.filter(cat => cat && cat.type === type && cat.id && cat.name);
-  }, [type, categories]);
+    if (!safeCategories || safeCategories.length === 0) return [];
+    
+    try {
+      return safeCategories
+        .filter(cat => {
+          // Validação robusta de categoria
+          if (!cat || typeof cat !== 'object') return false;
+          if (!cat.id || typeof cat.id !== 'string') return false;
+          if (!cat.name || typeof cat.name !== 'string') return false;
+          if (cat.type !== type) return false;
+          return true;
+        })
+        .map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          type: cat.type,
+          color: cat.color || '#6b7280',
+          icon: cat.icon || 'Tag'
+        }));
+    } catch (error) {
+      console.error('Error filtering categories:', error);
+      return [];
+    }
+  }, [type, safeCategories]);
 
   // Verificar se categoria selecionada ainda é válida
   const validCategoryId = useMemo(() => {
@@ -256,7 +288,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             </div>
 
             {/* Empresa */}
-            {companies && companies.length > 0 && (
+            {safeCompanies.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa</Label>
                 <Select
@@ -268,7 +300,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma empresa</SelectItem>
-                    {companies.map(company => (
+                    {safeCompanies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>

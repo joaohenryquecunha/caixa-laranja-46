@@ -25,6 +25,17 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   
+  // Garantir que categories e companies sempre sejam arrays válidos
+  const safeCategories = useMemo(() => {
+    if (!categories || !Array.isArray(categories)) return [];
+    return categories;
+  }, [categories]);
+  
+  const safeCompanies = useMemo(() => {
+    if (!companies || !Array.isArray(companies)) return [];
+    return companies;
+  }, [companies]);
+  
   const [type, setType] = useState<TransactionType | ''>('');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -53,6 +64,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     e.preventDefault();
     
     if (!amount || !validCategoryId || !type) {
+    if (!amount || !validCategoryId || !type) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -76,6 +88,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         amount: parseFloat(amount),
         description,
         categoryId: validCategoryId,
+        categoryId: validCategoryId,
         companyId: companyId || undefined,
         type,
         startDate: format(recurringStartDate, 'yyyy-MM-dd'),
@@ -90,6 +103,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       addTransaction({
         amount: parseFloat(amount),
         description,
+        categoryId: validCategoryId,
         categoryId: validCategoryId,
         companyId: companyId || undefined,
         type,
@@ -107,8 +121,37 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
   // Handler para mudança de tipo - limpa categoria e força re-render
   const handleTypeChange = useCallback((newType: TransactionType) => {
+  // Handler para mudança de tipo - limpa categoria e força re-render
+  const handleTypeChange = useCallback((newType: TransactionType) => {
     setType(newType);
     setCategoryId(''); // Limpar categoria quando tipo muda
+  }, []);
+
+  // Handler seguro para mudança de categoria
+  const handleCategoryChange = useCallback((value: string) => {
+    if (!type) {
+      setCategoryId('');
+      return;
+    }
+    
+    // Validar que a categoria existe
+    const categoryExists = filteredCategories.some(cat => cat.id === value);
+    if (categoryExists) {
+      setCategoryId(value);
+    } else {
+      setCategoryId('');
+    }
+  }, [type, filteredCategories]);
+
+  // Determinar placeholder e estado do select
+  const categoryPlaceholder = !type 
+    ? "Selecione o tipo primeiro" 
+    : filteredCategories.length === 0 
+      ? "Nenhuma categoria disponível"
+      : "Selecione uma categoria";
+
+  const isCategorySelectDisabled = !type || filteredCategories.length === 0;
+  const selectKey = `category-${type || 'none'}-${filteredCategories.length}`;
   }, []);
 
   // Handler seguro para mudança de categoria
@@ -235,11 +278,28 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 value={validCategoryId}
                 onValueChange={handleCategoryChange}
                 disabled={isCategorySelectDisabled}
+                key={selectKey}
+                value={validCategoryId}
+                onValueChange={handleCategoryChange}
+                disabled={isCategorySelectDisabled}
               >
+                <SelectTrigger className="bg-input border-border" disabled={isCategorySelectDisabled}>
+                  <SelectValue placeholder={categoryPlaceholder} />
                 <SelectTrigger className="bg-input border-border" disabled={isCategorySelectDisabled}>
                   <SelectValue placeholder={categoryPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                      {type ? "Nenhuma categoria disponível" : "Selecione o tipo primeiro"}
+                    </div>
+                  )}
                   {filteredCategories.length > 0 ? (
                     filteredCategories.map(category => (
                       <SelectItem key={category.id} value={category.id}>
@@ -256,7 +316,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             </div>
 
             {/* Empresa */}
-            {companies && companies.length > 0 && (
+            {safeCompanies.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa</Label>
                 <Select
@@ -268,7 +328,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma empresa</SelectItem>
-                    {companies.map(company => (
+                    {safeCompanies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>

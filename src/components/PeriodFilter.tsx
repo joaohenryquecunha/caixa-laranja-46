@@ -275,11 +275,15 @@ export function PeriodFilter({
                     <SelectContent className="z-50">
                       <SelectItem value="none">Nenhuma empresa</SelectItem>
                       <SelectItem value="all">Todas as empresas</SelectItem>
-                      {companies.map(company => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
+                      {companies
+                        .filter(company => company?.id && company?.name && 
+                               typeof company.id === 'string' && 
+                               typeof company.name === 'string')
+                        .map(company => (
+                          <SelectItem key={company.id} value={String(company.id)}>
+                            {String(company.name)}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

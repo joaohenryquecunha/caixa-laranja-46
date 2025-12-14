@@ -1054,9 +1054,19 @@ function useSupabaseFinancialDataInternal() {
   const getFilteredTransactions = useCallback(() => {
     const now = new Date();
     
+    // Função auxiliar para parsear data local (evita problemas de timezone)
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      // Se a data está no formato YYYY-MM-DD (sem hora), parse como local
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     
     const filtered = transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
+      const transactionDate = parseLocalDate(transaction.date);
       
       // Filter by company
       if (specificFilter.companyId) {
@@ -1125,8 +1135,21 @@ function useSupabaseFinancialDataInternal() {
 
   const getRecentTransactions = useCallback((limit: number = 5) => {
     const filteredTransactions = getFilteredTransactions();
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     return filteredTransactions
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => {
+        const dateA = parseLocalDate(a.date);
+        const dateB = parseLocalDate(b.date);
+        return dateB.getTime() - dateA.getTime();
+      })
       .slice(0, limit);
   }, [getFilteredTransactions]);
 
@@ -1135,29 +1158,56 @@ function useSupabaseFinancialDataInternal() {
   }, [categories]);
 
   const getAvailableYears = useCallback(() => {
-    const years = transactions.map(t => new Date(t.date).getFullYear());
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
+    const years = transactions.map(t => parseLocalDate(t.date).getFullYear());
     return Array.from(new Set(years)).sort((a, b) => b - a);
   }, [transactions]);
 
   const getAvailableMonths = useCallback((year?: number) => {
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     const targetYear = year || new Date().getFullYear();
     const months = transactions
-      .filter(t => new Date(t.date).getFullYear() === targetYear)
-      .map(t => new Date(t.date).getMonth());
+      .filter(t => parseLocalDate(t.date).getFullYear() === targetYear)
+      .map(t => parseLocalDate(t.date).getMonth());
     return Array.from(new Set(months)).sort((a, b) => a - b);
   }, [transactions]);
 
   const getAvailableDays = useCallback(() => {
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
     const days = transactions
       .filter(t => {
-        const date = new Date(t.date);
+        const date = parseLocalDate(t.date);
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       })
-      .map(t => new Date(t.date).getDate());
+      .map(t => parseLocalDate(t.date).getDate());
     
     return Array.from(new Set(days)).sort((a, b) => a - b);
   }, [transactions]);
@@ -1170,13 +1220,24 @@ function useSupabaseFinancialDataInternal() {
       return [];
     }
 
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
+    
     const transactionsByPeriod = filteredTransactions.reduce((acc, transaction) => {
       let periodKey = '';
+      const transactionDate = parseLocalDate(transaction.date);
       
       if (specificFilter.type === 'month') {
-        periodKey = format(new Date(transaction.date), 'yyyy-MM-dd');
+        periodKey = format(transactionDate, 'yyyy-MM-dd');
       } else if (specificFilter.type === 'year') {
-        periodKey = format(new Date(transaction.date), 'yyyy-MM');
+        periodKey = format(transactionDate, 'yyyy-MM');
       } else {
         periodKey = transaction.date;
       }

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Search, Filter } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { isWithinInterval, parseISO } from 'date-fns';
+import { isWithinInterval } from 'date-fns';
+import { parseLocalDate } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -48,9 +49,9 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
       (filterCompany === 'none' && !transaction.companyId) ||
       (filterCompany !== 'none' && transaction.companyId === filterCompany);
 
-    // Filtro de data
+    // Filtro de data - usar parseLocalDate para evitar problemas de timezone
     const matchesDateRange = !dateRange?.from || !dateRange?.to || 
-      isWithinInterval(parseISO(transaction.date), { 
+      isWithinInterval(parseLocalDate(transaction.date), { 
         start: dateRange.from, 
         end: dateRange.to 
       });
@@ -59,7 +60,11 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
   });
 
   const sortedTransactions = useMemo(
-    () => [...filteredTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    () => [...filteredTransactions].sort((a, b) => {
+      const dateA = parseLocalDate(a.date);
+      const dateB = parseLocalDate(b.date);
+      return dateB.getTime() - dateA.getTime();
+    }),
     [filteredTransactions]
   );
 

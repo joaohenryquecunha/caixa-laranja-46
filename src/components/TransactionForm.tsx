@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { X, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -22,8 +22,16 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ onClose }: TransactionFormProps) {
-  const { addTransaction, addRecurringTransactions, categories, companies } = useSupabaseFinancialData();
+  const { addTransaction, addRecurringTransactions, categories, companies, loading } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  
+  // Garantir que os dados sejam válidos quando o modal abrir
+  useEffect(() => {
+    // Validar que categories e companies são arrays válidos
+    if (!loading && (!Array.isArray(categories) || !Array.isArray(companies))) {
+      console.warn('⚠️ Dados inválidos detectados no TransactionForm. Categories:', categories, 'Companies:', companies);
+    }
+  }, [categories, companies, loading]);
   
   // Garantir que categories e companies sempre sejam arrays válidos
   const safeCategories = useMemo(() => {

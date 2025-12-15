@@ -86,9 +86,39 @@ function useSupabaseFinancialDataInternal() {
     companyId: undefined
   });
 
+  // Função para limpar cache antigo do localStorage
+  const clearOldCache = useCallback(() => {
+    try {
+      // Limpar dados antigos do localStorage que podem estar causando problemas
+      const oldKeys = [
+        'financial_transactions',
+        'financial_categories',
+        'financial_companies',
+        'financial_goals',
+        'financial_goal_history',
+        'sample_data_loaded'
+      ];
+      
+      oldKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Erro ao limpar ${key} do localStorage:`, e);
+        }
+      });
+      
+      console.log('✅ Cache antigo limpo com sucesso');
+    } catch (error) {
+      console.error('Erro ao limpar cache:', error);
+    }
+  }, []);
+
   // Load data when user is authenticated
   useEffect(() => {
     if (!authLoading && user) {
+      // Limpar cache antigo antes de carregar dados novos
+      clearOldCache();
+      // Forçar recarregamento dos dados do servidor
       loadData();
     } else if (!authLoading && !user) {
       // Clear data when user logs out
@@ -98,8 +128,10 @@ function useSupabaseFinancialDataInternal() {
       setGoals([]);
       setGoalHistory([]);
       setLoading(false);
+      // Também limpar cache ao fazer logout
+      clearOldCache();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, clearOldCache]);
 
   // Real-time updates for transactions
   useEffect(() => {
@@ -355,11 +387,21 @@ function useSupabaseFinancialDataInternal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions.length, goals.length, user]); // Usar transactions.length para evitar atualizações excessivas
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
     try {
+      // Limpar estados antes de carregar para evitar dados antigos
+      setTransactions([]);
+      setCategories([]);
+      setCompanies([]);
+      setGoals([]);
+      setGoalHistory([]);
+      
+      // Carregar dados do servidor em paralelo
+      // Nota: As funções load* são definidas no mesmo escopo e sempre têm acesso às variáveis mais recentes
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       await Promise.all([
         loadCategories(),
         loadCompanies(),
@@ -367,6 +409,8 @@ function useSupabaseFinancialDataInternal() {
         loadGoals(),
         loadGoalHistory()
       ]);
+      
+      console.log('✅ Dados carregados e organizados com sucesso');
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -377,7 +421,7 @@ function useSupabaseFinancialDataInternal() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   const loadCategories = async () => {
     if (!user) return;
@@ -386,7 +430,8 @@ function useSupabaseFinancialDataInternal() {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('Error loading categories:', error);
@@ -401,8 +446,19 @@ function useSupabaseFinancialDataInternal() {
         return;
       }
 
-      // Sincronizar categorias apenas se necessário
-      const normalized = await synchronizeCategories(data ?? []);
+      // Filtrar e validar categorias antes de sincronizar
+      const validData = (data ?? []).filter(cat => 
+        cat && 
+        cat.id && 
+        cat.name && 
+        cat.type &&
+        typeof cat.id === 'string' &&
+        typeof cat.name === 'string' &&
+        typeof cat.type === 'string'
+      );
+
+      // Sincronizar categorias e garantir que estejam organizadas
+      const normalized = await synchronizeCategories(validData);
       setCategories(normalized);
     } catch (err) {
       console.error('Error in loadCategories:', err);
@@ -583,16 +639,25 @@ function useSupabaseFinancialDataInternal() {
 
     if (error) {
       console.error('Error loading companies:', error);
+      setCompanies([]);
       return;
     }
 
+    // Validar e filtrar empresas inválidas
     const unique: Company[] = [];
     const seen = new Set<string>();
     (data ?? []).forEach((comp) => {
-      if (!comp?.id) return;
+      // Validação robusta
+      if (!comp || !comp.id || !comp.name) return;
+      if (typeof comp.id !== 'string' || typeof comp.name !== 'string') return;
+      if (!comp.id.trim() || !comp.name.trim()) return;
       if (seen.has(comp.id)) return;
+      
       seen.add(comp.id);
-      unique.push({ id: comp.id, name: comp.name });
+      unique.push({ 
+        id: String(comp.id).trim(), 
+        name: String(comp.name).trim() 
+      });
     });
 
     setCompanies(unique);
@@ -609,28 +674,29 @@ function useSupabaseFinancialDataInternal() {
 
     if (error) {
       console.error('Error loading transactions:', error);
+      setTransactions([]);
       return;
     }
 
-    const mappedTransactions = data.map(tx => ({
-      id: tx.id,
-      amount: Number(tx.amount),
-      description: tx.description,
-      categoryId: tx.category_id,
-      companyId: tx.company_id || undefined,
-      type: tx.type as TransactionType,
-      date: tx.date,
-      createdAt: tx.created_at
-    }));
-    
-    // Debug: verificar se created_at está sendo retornado
-    if (mappedTransactions.length > 0) {
-      console.log('Primeira transação mapeada:', {
-        id: mappedTransactions[0].id,
-        createdAt: mappedTransactions[0].createdAt,
-        created_at_original: data[0]?.created_at
-      });
-    }
+    // Validar e mapear transações, filtrando dados inválidos
+    const mappedTransactions = (data ?? [])
+      .filter(tx => {
+        // Validação básica
+        if (!tx || !tx.id || !tx.category_id || !tx.type || !tx.date) return false;
+        if (typeof tx.id !== 'string' || typeof tx.category_id !== 'string') return false;
+        if (isNaN(Number(tx.amount))) return false;
+        return true;
+      })
+      .map(tx => ({
+        id: String(tx.id).trim(),
+        amount: Number(tx.amount),
+        description: tx.description || '',
+        categoryId: String(tx.category_id).trim(),
+        companyId: tx.company_id ? String(tx.company_id).trim() : undefined,
+        type: tx.type as TransactionType,
+        date: String(tx.date),
+        createdAt: tx.created_at || new Date().toISOString()
+      }));
     
     setTransactions(mappedTransactions);
   };

@@ -33,7 +33,16 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   
   const safeCompanies = useMemo(() => {
     if (!companies || !Array.isArray(companies)) return [];
-    return companies;
+    // Validação robusta: filtrar empresas com dados inválidos
+    return companies.filter(comp => {
+      if (!comp || typeof comp !== 'object') return false;
+      if (!comp.id || typeof comp.id !== 'string' || !comp.id.trim()) return false;
+      if (!comp.name || typeof comp.name !== 'string' || !comp.name.trim()) return false;
+      return true;
+    }).map(comp => ({
+      id: String(comp.id).trim(),
+      name: String(comp.name).trim()
+    }));
   }, [companies]);
   
   const [type, setType] = useState<TransactionType | ''>('');
@@ -52,22 +61,30 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     if (!safeCategories || safeCategories.length === 0) return [];
     
     try {
-      return safeCategories
+      const filtered = safeCategories
         .filter(cat => {
           // Validação robusta de categoria
           if (!cat || typeof cat !== 'object') return false;
-          if (!cat.id || typeof cat.id !== 'string') return false;
-          if (!cat.name || typeof cat.name !== 'string') return false;
+          if (!cat.id || typeof cat.id !== 'string' || !cat.id.trim()) return false;
+          if (!cat.name || typeof cat.name !== 'string' || !cat.name.trim()) return false;
           if (cat.type !== type) return false;
           return true;
         })
         .map(cat => ({
-          id: cat.id,
-          name: cat.name,
+          id: String(cat.id).trim(),
+          name: String(cat.name).trim(),
           type: cat.type,
-          color: cat.color || '#6b7280',
-          icon: cat.icon || 'Tag'
+          color: String(cat.color || '#6b7280'),
+          icon: String(cat.icon || 'Tag')
         }));
+      
+      // Garantir que não há duplicatas por id
+      const seen = new Set<string>();
+      return filtered.filter(cat => {
+        if (seen.has(cat.id)) return false;
+        seen.add(cat.id);
+        return true;
+      });
     } catch (error) {
       console.error('Error filtering categories:', error);
       return [];
@@ -76,9 +93,10 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
   // Verificar se categoria selecionada ainda é válida
   const validCategoryId = useMemo(() => {
-    if (!categoryId || !type) return undefined;
-    const exists = filteredCategories.some(cat => cat.id === categoryId);
-    return exists ? categoryId : undefined;
+    if (!categoryId || !type || !categoryId.trim()) return undefined;
+    const trimmedCategoryId = String(categoryId).trim();
+    const exists = filteredCategories.some(cat => String(cat.id).trim() === trimmedCategoryId);
+    return exists ? trimmedCategoryId : undefined;
   }, [categoryId, filteredCategories, type]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -145,15 +163,16 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
   // Handler seguro para mudança de categoria
   const handleCategoryChange = useCallback((value: string) => {
-    if (!type) {
+    if (!type || !value || !value.trim()) {
       setCategoryId('');
       return;
     }
     
+    const trimmedValue = String(value).trim();
     // Validar que a categoria existe
-    const categoryExists = filteredCategories.some(cat => cat.id === value);
+    const categoryExists = filteredCategories.some(cat => String(cat.id).trim() === trimmedValue);
     if (categoryExists) {
-      setCategoryId(value);
+      setCategoryId(trimmedValue);
     } else {
       setCategoryId('');
     }
@@ -264,7 +283,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               </div>
               <Select
                 key={selectKey}
-                value={validCategoryId}
+                value={validCategoryId || undefined}
                 onValueChange={handleCategoryChange}
                 disabled={isCategorySelectDisabled}
               >
@@ -273,11 +292,18 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 </SelectTrigger>
                 <SelectContent>
                   {filteredCategories.length > 0 ? (
-                    filteredCategories.map(category => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))
+                    filteredCategories
+                      .filter(category => {
+                        // Filtrar categorias inválidas antes de renderizar
+                        return category?.id && category?.name && 
+                               typeof category.id === 'string' && 
+                               typeof category.name === 'string';
+                      })
+                      .map(category => (
+                        <SelectItem key={category.id} value={String(category.id)}>
+                          {String(category.name)}
+                        </SelectItem>
+                      ))
                   ) : (
                     <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
                       {type ? "Nenhuma categoria disponível" : "Selecione o tipo primeiro"}
@@ -300,11 +326,18 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma empresa</SelectItem>
-                    {safeCompanies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
+                    {safeCompanies
+                      .filter(company => {
+                        // Filtrar empresas inválidas antes de renderizar
+                        return company?.id && company?.name && 
+                               typeof company.id === 'string' && 
+                               typeof company.name === 'string';
+                      })
+                      .map(company => (
+                        <SelectItem key={company.id} value={String(company.id)}>
+                          {String(company.name)}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -156,11 +156,16 @@ function useSupabaseFinancialDataInternal() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
+            // Validação robusta antes de inserir
+            if (!payload.new?.id || !payload.new?.name || !payload.new?.type) return;
+            if (typeof payload.new.id !== 'string' || !payload.new.id.trim()) return;
+            if (typeof payload.new.name !== 'string' || !payload.new.name.trim()) return;
+            
             const inserted = {
-              id: payload.new.id,
-              name: payload.new.name,
-              color: payload.new.color,
-              icon: payload.new.icon,
+              id: String(payload.new.id).trim(),
+              name: String(payload.new.name).trim(),
+              color: String(payload.new.color || '#6b7280'),
+              icon: String(payload.new.icon || 'Tag'),
               type: payload.new.type as TransactionType,
             };
             setCategories(prev => {
@@ -168,15 +173,21 @@ function useSupabaseFinancialDataInternal() {
               return [...prev, inserted];
             });
           } else if (payload.eventType === 'UPDATE') {
+            // Validação robusta antes de atualizar
+            if (!payload.new?.id || !payload.new?.name || !payload.new?.type) return;
+            if (typeof payload.new.id !== 'string' || !payload.new.id.trim()) return;
+            if (typeof payload.new.name !== 'string' || !payload.new.name.trim()) return;
+            
             const updated = {
-              id: payload.new.id,
-              name: payload.new.name,
-              color: payload.new.color,
-              icon: payload.new.icon,
+              id: String(payload.new.id).trim(),
+              name: String(payload.new.name).trim(),
+              color: String(payload.new.color || '#6b7280'),
+              icon: String(payload.new.icon || 'Tag'),
               type: payload.new.type as TransactionType,
             };
             setCategories(prev => prev.map(c => (c.id === updated.id ? updated : c)));
           } else if (payload.eventType === 'DELETE') {
+            if (!payload.old?.id) return;
             setCategories(prev => prev.filter(c => c.id !== payload.old.id));
           }
         }
@@ -204,23 +215,34 @@ function useSupabaseFinancialDataInternal() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
+            // Validação robusta antes de inserir
+            if (!payload.new?.id || !payload.new?.name) return;
+            if (typeof payload.new.id !== 'string' || !payload.new.id.trim()) return;
+            if (typeof payload.new.name !== 'string' || !payload.new.name.trim()) return;
+            
             const inserted: Company = {
-              id: payload.new.id,
-              name: payload.new.name,
+              id: String(payload.new.id).trim(),
+              name: String(payload.new.name).trim(),
             };
             setCompanies((prev) => {
               if (prev.some((company) => company.id === inserted.id)) return prev;
               return [...prev, inserted];
             });
           } else if (payload.eventType === 'UPDATE') {
+            // Validação robusta antes de atualizar
+            if (!payload.new?.id || !payload.new?.name) return;
+            if (typeof payload.new.id !== 'string' || !payload.new.id.trim()) return;
+            if (typeof payload.new.name !== 'string' || !payload.new.name.trim()) return;
+            
             const updated: Company = {
-              id: payload.new.id,
-              name: payload.new.name,
+              id: String(payload.new.id).trim(),
+              name: String(payload.new.name).trim(),
             };
             setCompanies((prev) =>
               prev.map((company) => (company.id === updated.id ? updated : company))
             );
           } else if (payload.eventType === 'DELETE') {
+            if (!payload.old?.id) return;
             setCompanies((prev) => prev.filter((company) => company.id !== payload.old.id));
           }
         }
@@ -397,6 +419,12 @@ function useSupabaseFinancialDataInternal() {
     const map = new Map<string, any[]>();
 
     for (const cat of existing) {
+      // Validação robusta: filtrar categorias inválidas antes de processar
+      if (!cat || typeof cat !== 'object') continue;
+      if (!cat.id || typeof cat.id !== 'string' || !cat.id.trim()) continue;
+      if (!cat.name || typeof cat.name !== 'string' || !cat.name.trim()) continue;
+      if (!cat.type || typeof cat.type !== 'string') continue;
+      
       const key = keyFor(cat.type, cat.name);
       const list = map.get(key) ?? [];
       list.push(cat);
@@ -408,10 +436,10 @@ function useSupabaseFinancialDataInternal() {
     const toInsert: Omit<Category, 'id'>[] = [];
 
     const toCategory = (cat: any): Category => ({
-      id: cat.id,
-      name: cat.name,
-      color: cat.color,
-      icon: cat.icon,
+      id: String(cat.id || '').trim(),
+      name: String(cat.name || '').trim(),
+      color: String(cat.color || '#6b7280'),
+      icon: String(cat.icon || 'Tag'),
       type: cat.type as TransactionType,
     });
 
@@ -548,10 +576,12 @@ function useSupabaseFinancialDataInternal() {
     const unique: Company[] = [];
     const seen = new Set<string>();
     (data ?? []).forEach((comp) => {
-      if (!comp?.id) return;
+      // Validação robusta: verificar id e name válidos
+      if (!comp?.id || typeof comp.id !== 'string' || !comp.id.trim()) return;
+      if (!comp?.name || typeof comp.name !== 'string' || !comp.name.trim()) return;
       if (seen.has(comp.id)) return;
       seen.add(comp.id);
-      unique.push({ id: comp.id, name: comp.name });
+      unique.push({ id: comp.id.trim(), name: comp.name.trim() });
     });
 
     setCompanies(unique);
@@ -1024,9 +1054,19 @@ function useSupabaseFinancialDataInternal() {
   const getFilteredTransactions = useCallback(() => {
     const now = new Date();
     
+    // Função auxiliar para parsear data local (evita problemas de timezone)
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      // Se a data está no formato YYYY-MM-DD (sem hora), parse como local
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     
     const filtered = transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
+      const transactionDate = parseLocalDate(transaction.date);
       
       // Filter by company
       if (specificFilter.companyId) {
@@ -1095,8 +1135,21 @@ function useSupabaseFinancialDataInternal() {
 
   const getRecentTransactions = useCallback((limit: number = 5) => {
     const filteredTransactions = getFilteredTransactions();
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     return filteredTransactions
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => {
+        const dateA = parseLocalDate(a.date);
+        const dateB = parseLocalDate(b.date);
+        return dateB.getTime() - dateA.getTime();
+      })
       .slice(0, limit);
   }, [getFilteredTransactions]);
 
@@ -1105,29 +1158,56 @@ function useSupabaseFinancialDataInternal() {
   }, [categories]);
 
   const getAvailableYears = useCallback(() => {
-    const years = transactions.map(t => new Date(t.date).getFullYear());
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
+    const years = transactions.map(t => parseLocalDate(t.date).getFullYear());
     return Array.from(new Set(years)).sort((a, b) => b - a);
   }, [transactions]);
 
   const getAvailableMonths = useCallback((year?: number) => {
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     const targetYear = year || new Date().getFullYear();
     const months = transactions
-      .filter(t => new Date(t.date).getFullYear() === targetYear)
-      .map(t => new Date(t.date).getMonth());
+      .filter(t => parseLocalDate(t.date).getFullYear() === targetYear)
+      .map(t => parseLocalDate(t.date).getMonth());
     return Array.from(new Set(months)).sort((a, b) => a - b);
   }, [transactions]);
 
   const getAvailableDays = useCallback(() => {
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
     const days = transactions
       .filter(t => {
-        const date = new Date(t.date);
+        const date = parseLocalDate(t.date);
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       })
-      .map(t => new Date(t.date).getDate());
+      .map(t => parseLocalDate(t.date).getDate());
     
     return Array.from(new Set(days)).sort((a, b) => a - b);
   }, [transactions]);
@@ -1140,13 +1220,24 @@ function useSupabaseFinancialDataInternal() {
       return [];
     }
 
+    // Função auxiliar para parsear data local
+    const parseLocalDate = (dateString: string): Date => {
+      if (!dateString) return new Date(NaN);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return new Date(dateString);
+    };
+    
     const transactionsByPeriod = filteredTransactions.reduce((acc, transaction) => {
       let periodKey = '';
+      const transactionDate = parseLocalDate(transaction.date);
       
       if (specificFilter.type === 'month') {
-        periodKey = format(new Date(transaction.date), 'yyyy-MM-dd');
+        periodKey = format(transactionDate, 'yyyy-MM-dd');
       } else if (specificFilter.type === 'year') {
-        periodKey = format(new Date(transaction.date), 'yyyy-MM');
+        periodKey = format(transactionDate, 'yyyy-MM');
       } else {
         periodKey = transaction.date;
       }

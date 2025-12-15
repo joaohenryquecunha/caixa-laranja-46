@@ -16,9 +16,38 @@ export function useAuth() {
   });
 
   useEffect(() => {
+    // Função para limpar cache antigo quando necessário
+    const clearOldCache = () => {
+      try {
+        const oldKeys = [
+          'financial_transactions',
+          'financial_categories',
+          'financial_companies',
+          'financial_goals',
+          'financial_goal_history',
+          'sample_data_loaded'
+        ];
+        
+        oldKeys.forEach(key => {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            // Ignorar erros silenciosamente
+          }
+        });
+      } catch (error) {
+        // Ignorar erros silenciosamente
+      }
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        // Limpar cache quando detectar login ou mudança de sessão
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          clearOldCache();
+        }
+        
         setAuthState({
           user: session?.user ?? null,
           session,
@@ -29,6 +58,11 @@ export function useAuth() {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // Se já houver uma sessão, limpar cache antigo
+      if (session) {
+        clearOldCache();
+      }
+      
       setAuthState({
         user: session?.user ?? null,
         session,

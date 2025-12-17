@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { X, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -24,6 +24,14 @@ interface TransactionFormProps {
 export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies, loading } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  // Detectar se é Chrome (para aplicar correções específicas)
+  const isChrome = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const userAgent = window.navigator.userAgent;
+    return /Chrome/.test(userAgent) && !/Edge|Edg/.test(userAgent);
+  }, []);
   
   // Garantir que os dados sejam válidos quando o modal abrir
   useEffect(() => {
@@ -32,6 +40,25 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       console.warn('⚠️ Dados inválidos detectados no TransactionForm. Categories:', categories, 'Companies:', companies);
     }
   }, [categories, companies, loading]);
+  
+  // Proteção adicional para Chrome: garantir que o modal está montado corretamente
+  useEffect(() => {
+    if (isChrome) {
+      // Forçar re-render se necessário no Chrome
+      const timer = setTimeout(() => {
+        if (formRef.current) {
+          // Garantir que o form está acessível
+          try {
+            formRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+          } catch (e) {
+            // Ignorar erros silenciosamente
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isChrome, categories, companies]);
   
   // Garantir que categories e companies sempre sejam arrays válidos
   const safeCategories = useMemo(() => {
@@ -107,9 +134,16 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     return exists ? trimmedCategoryId : undefined;
   }, [categoryId, filteredCategories, type]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    } catch (error) {
+      // Ignorar erros de preventDefault no Chrome
+      console.warn('Erro ao prevenir comportamento padrão:', error);
+    }
     
+    // Validação robusta antes de processar
     if (!amount || !validCategoryId || !type) {
       toast({
         title: "Erro",
@@ -117,6 +151,28 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         variant: "destructive"
       });
       return;
+    }
+    
+    // Validação adicional para Chrome
+    if (isChrome) {
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        toast({
+          title: "Erro",
+          description: "Por favor, informe um valor válido.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (!validCategoryId || !validCategoryId.trim()) {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione uma categoria válida.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     if (isRecurring) {
@@ -160,8 +216,23 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       });
     }
 
-    onClose();
-  };
+    // Fechar modal após sucesso
+    try {
+      onClose();
+    } catch (error) {
+      console.error('Erro ao fechar modal:', error);
+      // Tentar fechar de outra forma no Chrome
+      if (isChrome) {
+        setTimeout(() => {
+          try {
+            onClose();
+          } catch (e) {
+            console.error('Erro ao fechar modal (tentativa 2):', e);
+          }
+        }, 100);
+      }
+    }
+  }, [amount, validCategoryId, type, isRecurring, recurringTimes, recurringStartDate, description, companyId, date, addTransaction, addRecurringTransactions, toast, isChrome, onClose]);
 
   // Handler para mudança de tipo - limpa categoria e força re-render
   const handleTypeChange = useCallback((newType: TransactionType) => {
@@ -220,7 +291,13 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
         {/* Conteúdo scrollável */}
         <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" id="transaction-form">
+          <form 
+            ref={formRef}
+            onSubmit={handleSubmit} 
+            className="flex flex-col flex-1 min-h-0" 
+            id="transaction-form"
+            noValidate
+          >
             <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 flex-1 min-h-0 flex flex-col gap-4">
               {/* Tipo */}
             <div className="flex flex-col gap-3">
@@ -301,6 +378,21 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 value={validCategoryId || undefined}
                 onValueChange={handleCategoryChange}
                 disabled={isCategorySelectDisabled}
+                onOpenChange={(open) => {
+                  // Proteção para Chrome: garantir que o Select funciona corretamente
+                  if (isChrome && !open && formRef.current) {
+                    // Forçar re-validação após fechar o Select no Chrome
+                    setTimeout(() => {
+                      if (formRef.current) {
+                        try {
+                          formRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+                        } catch (e) {
+                          // Ignorar erros
+                        }
+                      }
+                    }, 50);
+                  }
+                }}
               >
                 <SelectTrigger className="bg-input border-border" disabled={isCategorySelectDisabled}>
                   <SelectValue placeholder={categoryPlaceholder} />
@@ -411,21 +503,51 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal bg-input border-border",
                           !recurringStartDate && "text-muted-foreground"
                         )}
+                        onClick={(e) => {
+                          // Proteção para Chrome: prevenir comportamento inesperado
+                          if (isChrome) {
+                            e.stopPropagation();
+                          }
+                        }}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {recurringStartDate ? format(recurringStartDate, "dd MMM yyyy", { locale: ptBR }) : "Selecione a data"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent 
+                      className="w-auto p-0" 
+                      align="start"
+                      onOpenAutoFocus={(e) => {
+                        // Proteção para Chrome: prevenir problemas de foco
+                        if (isChrome) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
                       <Calendar
                         mode="single"
                         selected={recurringStartDate}
-                        onSelect={(date) => date && setRecurringStartDate(date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            setRecurringStartDate(date);
+                            // Proteção para Chrome: garantir que a mudança é processada
+                            if (isChrome && formRef.current) {
+                              setTimeout(() => {
+                                try {
+                                  formRef.current?.dispatchEvent(new Event('change', { bubbles: true }));
+                                } catch (e) {
+                                  // Ignorar erros
+                                }
+                              }, 50);
+                            }
+                          }
+                        }}
                         initialFocus
                         className="p-3"
                       />
@@ -469,9 +591,61 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               className="flex-1"
               onClick={(e) => {
                 e.preventDefault();
-                const form = document.getElementById('transaction-form') as HTMLFormElement;
-                if (form) {
-                  form.requestSubmit();
+                e.stopPropagation();
+                
+                // Método mais compatível entre navegadores
+                try {
+                  if (formRef.current) {
+                    // Chrome pode ter problemas com requestSubmit, usar submit direto
+                    if (isChrome) {
+                      // Validar antes de submeter no Chrome
+                      if (!amount || !validCategoryId || !type) {
+                        toast({
+                          title: "Erro",
+                          description: "Por favor, preencha todos os campos obrigatórios.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      // Chamar handleSubmit diretamente
+                      const syntheticEvent = {
+                        preventDefault: () => {},
+                        stopPropagation: () => {},
+                      } as React.FormEvent;
+                      handleSubmit(syntheticEvent);
+                    } else {
+                      // Outros navegadores podem usar requestSubmit
+                      if (formRef.current.requestSubmit) {
+                        formRef.current.requestSubmit();
+                      } else {
+                        formRef.current.submit();
+                      }
+                    }
+                  } else {
+                    // Fallback: buscar form por ID
+                    const form = document.getElementById('transaction-form') as HTMLFormElement;
+                    if (form) {
+                      if (isChrome && formRef.current) {
+                        const syntheticEvent = {
+                          preventDefault: () => {},
+                          stopPropagation: () => {},
+                        } as React.FormEvent;
+                        handleSubmit(syntheticEvent);
+                      } else if (form.requestSubmit) {
+                        form.requestSubmit();
+                      } else {
+                        form.submit();
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('Erro ao submeter formulário:', error);
+                  // Fallback: chamar handleSubmit diretamente
+                  const syntheticEvent = {
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                  } as React.FormEvent;
+                  handleSubmit(syntheticEvent);
                 }
               }}
             >

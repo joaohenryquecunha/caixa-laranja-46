@@ -197,26 +197,33 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const selectKey = `category-${type || 'none'}-${filteredCategories.length}`;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md bg-gradient-card border-border shadow-card">
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <h2 className="text-lg font-semibold text-foreground">
-              Nova Transação
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="ml-auto text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+    <div 
+      className="fixed inset-0 bg-black/50 z-50 overflow-hidden"
+      style={{ marginTop: 0, marginBottom: 0 }}
+    >
+      <div className="w-full h-full flex flex-col sm:items-center sm:justify-center sm:p-4">
+        <Card className="w-full h-full sm:w-full sm:max-w-md sm:h-auto sm:max-h-[90vh] bg-gradient-card border-0 sm:border border-border shadow-card flex flex-col sm:rounded-lg sm:my-auto overflow-hidden">
+        {/* Header fixo */}
+        <div className="flex items-center gap-4 p-4 sm:p-6 border-b border-border flex-shrink-0">
+          <h2 className="text-lg font-semibold text-foreground">
+            Nova Transação
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="ml-auto text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Tipo */}
-            <div className="space-y-3">
+        {/* Conteúdo scrollável */}
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" id="transaction-form">
+            <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 flex-1 min-h-0 flex flex-col gap-4">
+              {/* Tipo */}
+            <div className="flex flex-col gap-3">
               <Label>Tipo *</Label>
               <div className="grid grid-cols-3 gap-2">
                 <Button
@@ -259,7 +266,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             </div>
 
             {/* Valor */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="amount">Valor *</Label>
               <Input
                 id="amount"
@@ -273,7 +280,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             </div>
 
             {/* Categoria */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="category">Categoria *</Label>
                 {type && filteredCategories.length === 0 && (
@@ -323,7 +330,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
             {/* Empresa */}
             {safeCompanies.length > 0 && (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="company">Empresa</Label>
                 <Select
                   value={companyId || "none"}
@@ -352,7 +359,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             )}
 
             {/* Descrição */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="description">Descrição</Label>
               <Textarea
                 id="description"
@@ -386,7 +393,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             {/* Campos de Recorrencia */}
             {isRecurring && (
               <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/50 rounded-lg border border-border">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="times">Quantidade de vezes *</Label>
                   <Input
                     id="times"
@@ -399,7 +406,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                     className="bg-input border-border"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label>Data inicial *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -429,7 +436,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             )}
 
             {/* Data */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="date">Data {isRecurring ? "(será ignorada)" : "*"}</Label>
               <Input
                 id="date"
@@ -441,27 +448,39 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
               />
             </div>
 
-            {/* Botões */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onClose}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="gradient"
-                className="flex-1"
-              >
-                {isRecurring ? `Criar ${recurringTimes} Transações` : 'Adicionar'}
-              </Button>
             </div>
           </form>
         </div>
-      </Card>
+        
+        {/* Botões fixos no rodapé do modal */}
+        <div className="px-4 sm:px-6 py-4 border-t border-border bg-gradient-card flex-shrink-0">
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="gradient"
+              className="flex-1"
+              onClick={(e) => {
+                e.preventDefault();
+                const form = document.getElementById('transaction-form') as HTMLFormElement;
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+            >
+              {isRecurring ? `Criar ${recurringTimes} Transações` : 'Adicionar'}
+            </Button>
+          </div>
+        </div>
+        </Card>
+      </div>
       
       {/* Category Manager Modal */}
       {showCategoryManager && (

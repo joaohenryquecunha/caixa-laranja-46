@@ -10,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { differenceInDays, format, formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Shield, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Shield, ShieldOff, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface UserData {
   id: string;
@@ -32,6 +33,7 @@ export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserData[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const checkedRef = useRef(false);
   const loadingUsersRef = useRef(false);
 
@@ -245,9 +247,21 @@ export default function Admin() {
     return { label: 'Pendente', variant: 'outline' as const };
   };
 
-  const sortedUsers = useMemo(() => {
-    return [...users].sort((a, b) => a.name.localeCompare(b.name));
-  }, [users]);
+  const filteredAndSortedUsers = useMemo(() => {
+    let filtered = users;
+    
+    // Filtrar por nome se houver termo de busca
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = users.filter(user => 
+        user.name.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term)
+      );
+    }
+    
+    // Ordenar por nome
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  }, [users, searchTerm]);
 
   if (loading) {
     return (
@@ -278,8 +292,21 @@ export default function Admin() {
           <CardHeader>
             <CardTitle>Usuários</CardTitle>
             <CardDescription>
-              Total de {sortedUsers.length} usuários cadastrados
+              Total de {users.length} usuários cadastrados
+              {searchTerm && ` • ${filteredAndSortedUsers.length} resultado(s) encontrado(s)`}
             </CardDescription>
+            <div className="mt-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nome ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 bg-input border-border"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="hidden lg:block">
@@ -299,7 +326,7 @@ export default function Admin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedUsers.map(user => {
+                  {filteredAndSortedUsers.map(user => {
                     const accessStatus = getAccessStatus(user);
                     return (
                       <TableRow key={user.id}>
@@ -354,7 +381,7 @@ export default function Admin() {
             </div>
 
             <div className="grid gap-4 p-4 lg:hidden">
-              {sortedUsers.map(user => {
+              {filteredAndSortedUsers.map(user => {
                 const accessStatus = getAccessStatus(user);
                 return (
                   <Card key={user.id} className="bg-card border-border">
@@ -363,9 +390,9 @@ export default function Admin() {
                         <div>
                           <p className="text-base font-semibold text-foreground">{user.name}</p>
                           <p className="text-sm text-muted-foreground break-all">{user.email}</p>
-                          {user.phone && (
-                            <p className="text-sm text-muted-foreground break-all">{user.phone}</p>
-                          )}
+                          <p className="text-sm text-muted-foreground break-all">
+                            {user.phone || 'sem numero'}
+                          </p>
                         </div>
                         <Badge variant={accessStatus.variant}>{accessStatus.label}</Badge>
                       </div>

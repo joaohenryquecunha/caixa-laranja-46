@@ -113,16 +113,14 @@ function useSupabaseFinancialDataInternal() {
     }
   }, []);
 
-  const userId = user?.id;
-
-  // Load data when user is authenticated (userId evita recarregar ao renovar token)
+  // Load data when user is authenticated
   useEffect(() => {
-    if (!authLoading && userId) {
+    if (!authLoading && user) {
       // Limpar cache antigo antes de carregar dados novos
       clearOldCache();
       // Forçar recarregamento dos dados do servidor
       loadData();
-    } else if (!authLoading && !userId) {
+    } else if (!authLoading && !user) {
       // Clear data when user logs out
       setTransactions([]);
       setCategories([]);
@@ -133,7 +131,7 @@ function useSupabaseFinancialDataInternal() {
       // Também limpar cache ao fazer logout
       clearOldCache();
     }
-  }, [userId, authLoading, clearOldCache]);
+  }, [user, authLoading, clearOldCache]);
 
   // Real-time updates for transactions
   useEffect(() => {

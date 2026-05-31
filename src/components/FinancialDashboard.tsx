@@ -189,7 +189,9 @@ export function FinancialDashboard({
         <Card className="bg-gradient-card border-border shadow-card p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <p className="text-muted-foreground mb-2">Saldo Total</p>
+              <p className="text-muted-foreground mb-2">
+                {specificFilter.type === 'all' ? 'Saldo Acumulado' : 'Saldo Total'}
+              </p>
               <p className="text-4xl font-bold bg-gradient-balance bg-clip-text text-transparent">
                 {formatCurrency(summary.totalBalance)}
               </p>
@@ -201,7 +203,7 @@ export function FinancialDashboard({
                       ? (specificFilter.month !== undefined ? ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][specificFilter.month] : 'Este mês')
                       : specificFilter.type === 'year' 
                         ? (specificFilter.year || 'Este ano')
-                        : 'Todos os períodos'
+                        : 'Todo o histórico (saldo acumulado)'
                 }
               </p>
             </div>

@@ -91,7 +91,7 @@ export function PeriodFilter({
 
   const getMainFilterLabel = () => {
     const label = getFilterLabel(specificFilter);
-    return label === 'Tudo' ? 'Filtros' : label;
+    return label === 'Tudo' ? 'Todo o período' : label;
   };
 
   const handleApplyFilter = () => {

@@ -5,7 +5,7 @@ import { Goal, GoalProgress, GoalHistory } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, sortTransactionsDesc } from '@/lib/formatters';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -80,9 +80,7 @@ function useSupabaseFinancialDataInternal() {
   const [goalHistory, setGoalHistory] = useState<GoalHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ 
-    type: 'month',
-    year: new Date().getFullYear(),
-    month: new Date().getMonth(),
+    type: 'all',
     companyId: undefined
   });
 
@@ -672,6 +670,7 @@ function useSupabaseFinancialDataInternal() {
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .order('date', { ascending: false });
 
     if (error) {
@@ -1185,7 +1184,7 @@ function useSupabaseFinancialDataInternal() {
       }
     });
     
-    return filtered;
+    return sortTransactionsDesc(filtered);
   }, [transactions, specificFilter]);
 
   const getFinancialSummary = useCallback((): FinancialSummary => {
@@ -1214,10 +1213,7 @@ function useSupabaseFinancialDataInternal() {
   }, [getFilteredTransactions]);
 
   const getRecentTransactions = useCallback((limit: number = 5) => {
-    const filteredTransactions = getFilteredTransactions();
-    return filteredTransactions
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, limit);
+    return getFilteredTransactions().slice(0, limit);
   }, [getFilteredTransactions]);
 
   const getCategoryById = useCallback((id: string) => {
@@ -1265,7 +1261,7 @@ function useSupabaseFinancialDataInternal() {
       
       if (specificFilter.type === 'month') {
         periodKey = format(new Date(transaction.date), 'yyyy-MM-dd');
-      } else if (specificFilter.type === 'year') {
+      } else if (specificFilter.type === 'year' || specificFilter.type === 'all') {
         periodKey = format(new Date(transaction.date), 'yyyy-MM');
       } else {
         periodKey = transaction.date;
@@ -1299,8 +1295,8 @@ function useSupabaseFinancialDataInternal() {
       if (specificFilter.type === 'month') {
         displayDate = format(new Date(period), 'dd');
         tooltipDate = format(new Date(period), 'dd/MMM/yyyy');
-      } else if (specificFilter.type === 'year') {
-        displayDate = format(new Date(period + '-01'), 'MMM');
+      } else if (specificFilter.type === 'year' || specificFilter.type === 'all') {
+        displayDate = format(new Date(period + '-01'), 'MMM/yy');
         tooltipDate = format(new Date(period + '-01'), 'MMM/yyyy');
       } else {
         displayDate = format(new Date(period), 'dd/MM');

@@ -5,7 +5,7 @@ import { Goal, GoalProgress, GoalHistory } from '@/types/goals';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { addMonths, format, isToday, isThisMonth, isThisYear, isSameDay, differenceInDays, parseISO } from 'date-fns';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, sortTransactionsDesc } from '@/lib/formatters';
 
 export type FilterPeriod = 'day' | 'month' | 'year' | 'all';
 
@@ -81,9 +81,7 @@ function useSupabaseFinancialDataInternal() {
   const [loading, setLoading] = useState(true);
   const hasLoadedDataRef = useRef(false);
   const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ 
-    type: 'month',
-    year: new Date().getFullYear(),
-    month: new Date().getMonth(),
+    type: 'all',
     companyId: undefined
   });
 
@@ -601,6 +599,7 @@ function useSupabaseFinancialDataInternal() {
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .order('date', { ascending: false });
 
     if (error) {
@@ -1112,7 +1111,7 @@ function useSupabaseFinancialDataInternal() {
       }
     });
     
-    return filtered;
+    return sortTransactionsDesc(filtered);
   }, [transactions, specificFilter]);
 
   const getFinancialSummary = useCallback((): FinancialSummary => {
@@ -1141,23 +1140,7 @@ function useSupabaseFinancialDataInternal() {
   }, [getFilteredTransactions]);
 
   const getRecentTransactions = useCallback((limit: number = 5) => {
-    const filteredTransactions = getFilteredTransactions();
-    // Função auxiliar para parsear data local
-    const parseLocalDate = (dateString: string): Date => {
-      if (!dateString) return new Date(NaN);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const [year, month, day] = dateString.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      }
-      return new Date(dateString);
-    };
-    return filteredTransactions
-      .sort((a, b) => {
-        const dateA = parseLocalDate(a.date);
-        const dateB = parseLocalDate(b.date);
-        return dateB.getTime() - dateA.getTime();
-      })
-      .slice(0, limit);
+    return getFilteredTransactions().slice(0, limit);
   }, [getFilteredTransactions]);
 
   const getCategoryById = useCallback((id: string) => {
@@ -1243,7 +1226,7 @@ function useSupabaseFinancialDataInternal() {
       
       if (specificFilter.type === 'month') {
         periodKey = format(transactionDate, 'yyyy-MM-dd');
-      } else if (specificFilter.type === 'year') {
+      } else if (specificFilter.type === 'year' || specificFilter.type === 'all') {
         periodKey = format(transactionDate, 'yyyy-MM');
       } else {
         periodKey = transaction.date;
@@ -1277,8 +1260,8 @@ function useSupabaseFinancialDataInternal() {
       if (specificFilter.type === 'month') {
         displayDate = format(new Date(period), 'dd');
         tooltipDate = format(new Date(period), 'dd/MMM/yyyy');
-      } else if (specificFilter.type === 'year') {
-        displayDate = format(new Date(period + '-01'), 'MMM');
+      } else if (specificFilter.type === 'year' || specificFilter.type === 'all') {
+        displayDate = format(new Date(period + '-01'), 'MMM/yy');
         tooltipDate = format(new Date(period + '-01'), 'MMM/yyyy');
       } else {
         displayDate = format(new Date(period), 'dd/MM');

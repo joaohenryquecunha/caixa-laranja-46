@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { Transaction, TransactionType } from '@/types/financial';
-import { formatCurrency, formatDate } from '@/lib/formatters';
+import { formatCurrency, formatDate, sortTransactionsDesc } from '@/lib/formatters';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -32,6 +32,10 @@ export function TransactionList({
 }: TransactionListProps) {
   const { getCategoryById } = useSupabaseFinancialData();
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const sortedTransactions = useMemo(
+    () => sortTransactionsDesc(transactions),
+    [transactions]
+  );
 
   const requestDelete = (transaction: Transaction) => {
     setTransactionToDelete(transaction);
@@ -67,7 +71,7 @@ export function TransactionList({
     return type === TransactionType.INCOME ? '+' : '-';
   };
 
-  if (transactions.length === 0) {
+  if (sortedTransactions.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <p>Nenhuma transação encontrada</p>
@@ -77,7 +81,7 @@ export function TransactionList({
 
   return (
     <div className={`space-y-3 ${showScrollbar ? 'p-4' : 'px-4 pb-4'}`}>
-      {transactions.map((transaction, index) => {
+      {sortedTransactions.map((transaction, index) => {
         const category = getCategoryById(transaction.categoryId);
         const colorClass = getTransactionColor(transaction.type);
         const sign = getAmountSign(transaction.type);

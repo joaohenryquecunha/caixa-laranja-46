@@ -5,6 +5,21 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/** Ordena transações pelo fluxo real de lançamento: createdAt desc, depois data desc. */
+export function sortTransactionsDesc<T extends { date: string; createdAt?: string; id?: string }>(
+  items: T[]
+): T[] {
+  return [...items].sort((a, b) => {
+    const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (createdB !== createdA) return createdB - createdA;
+    const dateA = parseLocalDate(a.date).getTime();
+    const dateB = parseLocalDate(b.date).getTime();
+    if (dateB !== dateA) return dateB - dateA;
+    return (b.id ?? '').localeCompare(a.id ?? '');
+  });
+}
+
 /**
  * Parse uma data no formato YYYY-MM-DD como data local (não UTC)
  * Isso evita problemas de timezone onde uma data pode aparecer como o dia anterior

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Search, Filter } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval } from 'date-fns';
-import { parseLocalDate } from '@/lib/formatters';
+import { parseLocalDate, sortTransactionsDesc } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -60,11 +60,7 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
   });
 
   const sortedTransactions = useMemo(
-    () => [...filteredTransactions].sort((a, b) => {
-      const dateA = parseLocalDate(a.date);
-      const dateB = parseLocalDate(b.date);
-      return dateB.getTime() - dateA.getTime();
-    }),
+    () => sortTransactionsDesc(filteredTransactions),
     [filteredTransactions]
   );
 

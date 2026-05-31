@@ -86,11 +86,13 @@ function useSupabaseFinancialDataInternal() {
     companyId: undefined
   });
 
-  // Load data when user is authenticated
+  const userId = user?.id;
+
+  // Load data when user is authenticated (userId evita recarregar ao renovar token)
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && userId) {
       loadData();
-    } else if (!authLoading && !user) {
+    } else if (!authLoading && !userId) {
       // Clear data when user logs out
       setTransactions([]);
       setCategories([]);
@@ -99,7 +101,7 @@ function useSupabaseFinancialDataInternal() {
       setGoalHistory([]);
       setLoading(false);
     }
-  }, [user, authLoading]);
+  }, [userId, authLoading]);
 
   // Real-time updates for transactions
   useEffect(() => {

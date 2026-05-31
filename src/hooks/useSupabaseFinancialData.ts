@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode, createElement } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, createElement, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Transaction, Category, TransactionType, FinancialSummary, Company } from '@/types/financial';
 import { Goal, GoalProgress, GoalHistory } from '@/types/goals';
@@ -79,6 +79,7 @@ function useSupabaseFinancialDataInternal() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [goalHistory, setGoalHistory] = useState<GoalHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasLoadedDataRef = useRef(false);
   const [specificFilter, setSpecificFilter] = useState<SpecificFilter>({ 
     type: 'month',
     year: new Date().getFullYear(),
@@ -94,6 +95,7 @@ function useSupabaseFinancialDataInternal() {
       loadData();
     } else if (!authLoading && !userId) {
       // Clear data when user logs out
+      hasLoadedDataRef.current = false;
       setTransactions([]);
       setCategories([]);
       setCompanies([]);
@@ -376,7 +378,9 @@ function useSupabaseFinancialDataInternal() {
   const loadData = async () => {
     if (!user) return;
     
-    setLoading(true);
+    if (!hasLoadedDataRef.current) {
+      setLoading(true);
+    }
     try {
       await Promise.all([
         loadCategories(),
@@ -385,6 +389,7 @@ function useSupabaseFinancialDataInternal() {
         loadGoals(),
         loadGoalHistory()
       ]);
+      hasLoadedDataRef.current = true;
     } catch (error) {
       console.error('Error loading data:', error);
       toast({

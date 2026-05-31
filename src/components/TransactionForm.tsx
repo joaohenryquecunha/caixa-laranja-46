@@ -16,46 +16,12 @@ import { CategoryManager } from '@/components/CategoryManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
-const DRAFT_STORAGE_KEY = 'caixa-laranja-transaction-form-draft';
-
-interface TransactionFormDraft {
-  type: TransactionType | '';
-  amount: string;
-  categoryId: string;
-  companyId: string;
-  description: string;
-  date: string;
-  isRecurring: boolean;
-  recurringTimes: string;
-  recurringStartDate: string;
-}
-
-function readDraft(): TransactionFormDraft | null {
-  try {
-    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as TransactionFormDraft;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(draft: TransactionFormDraft) {
-  try {
-    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-  } catch {
-    // Ignorar falhas de storage
-  }
-}
-
-function clearDraft() {
-  try {
-    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-  } catch {
-    // Ignorar falhas de storage
-  }
-}
+import {
+  clearTransactionFormStorage,
+  draftHasContent,
+  readTransactionFormDraft,
+  saveTransactionFormDraft,
+} from '@/lib/transaction-form-storage';
 
 interface TransactionFormProps {
   onClose: () => void;
@@ -65,10 +31,12 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies, loading } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const savedDraft = useMemo(() => readDraft(), []);
+  const isClosingRef = useRef(false);
+  const savedDraft = useMemo(() => readTransactionFormDraft(), []);
 
   const handleClose = useCallback(() => {
-    clearDraft();
+    isClosingRef.current = true;
+    clearTransactionFormStorage();
     onClose();
   }, [onClose]);
   
@@ -138,8 +106,10 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     savedDraft?.recurringStartDate ? new Date(savedDraft.recurringStartDate) : new Date()
   );
 
-  useEffect(() => {
-    saveDraft({
+  const persistDraft = useCallback(() => {
+    if (isClosingRef.current) return;
+
+    const draft = {
       type,
       amount,
       categoryId,
@@ -149,8 +119,32 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       isRecurring,
       recurringTimes,
       recurringStartDate: recurringStartDate.toISOString(),
-    });
+    };
+    if (draftHasContent(draft)) {
+      saveTransactionFormDraft(draft);
+    }
   }, [type, amount, categoryId, companyId, description, date, isRecurring, recurringTimes, recurringStartDate]);
+
+  useEffect(() => {
+    persistDraft();
+  }, [persistDraft]);
+
+  useEffect(() => {
+    const flushDraft = () => persistDraft();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushDraft();
+      }
+    };
+
+    window.addEventListener('pagehide', flushDraft);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', flushDraft);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [persistDraft]);
 
   // Filtrar categorias pelo tipo selecionado - memoizado e seguro com validação robusta
   const filteredCategories = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -17,6 +17,11 @@ import { CategoryPieChart } from '@/components/CategoryPieChart';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { formatCurrency } from '@/lib/formatters';
 import { lockBodyScroll, unlockBodyScroll } from '@/lib/scroll-lock';
+import {
+  clearTransactionFormStorage,
+  isTransactionFormModalOpen,
+  setTransactionFormModalOpen,
+} from '@/lib/transaction-form-storage';
 
 interface FinancialDashboardProps {
   onManageSubscription?: () => void;
@@ -34,7 +39,7 @@ export function FinancialDashboard({
   onSignOut,
 }: FinancialDashboardProps = {}) {
   const navigate = useNavigate();
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [showTransactionForm, setShowTransactionForm] = useState(() => isTransactionFormModalOpen());
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showCompanyManager, setShowCompanyManager] = useState(false);
@@ -59,6 +64,17 @@ export function FinancialDashboard({
   const [allInitialFilterType, setAllInitialFilterType] = useState<string>('all');
 
   const modalOpen = showTransactionForm || showAllTransactions || showCategoryManager || showCompanyManager;
+
+  const openTransactionForm = useCallback(() => {
+    setTransactionFormModalOpen(true);
+    setShowTransactionForm(true);
+  }, []);
+
+  const closeTransactionForm = useCallback(() => {
+    clearTransactionFormStorage();
+    setShowTransactionForm(false);
+    setSelectedTransaction(null);
+  }, []);
 
   const handleAdminNavigate = () => {
     if (onAdmin) {
@@ -110,7 +126,7 @@ export function FinancialDashboard({
               </p>
             </div>
             <FloatingActionButton
-              onNewTransaction={() => setShowTransactionForm(true)}
+              onNewTransaction={openTransactionForm}
               onCategoryManager={() => setShowCategoryManager(true)}
               onCompanyManager={() => setShowCompanyManager(true)}
               showManageSubscription={showManageSubscription}
@@ -159,7 +175,7 @@ export function FinancialDashboard({
                 Empresas
               </Button>
               <Button
-                onClick={() => setShowTransactionForm(true)}
+                onClick={openTransactionForm}
                 variant="gradient"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -311,7 +327,7 @@ export function FinancialDashboard({
                 transactions={filteredTransactions} 
                 onEditTransaction={(transaction) => {
                   setSelectedTransaction(transaction);
-                  setShowTransactionForm(true);
+                  openTransactionForm();
                 }}
                 onDeleteTransaction={deleteTransaction}
                 showScrollbar={true}
@@ -322,10 +338,7 @@ export function FinancialDashboard({
 
         {/* Transaction Form Modal */}
         {showTransactionForm && (
-          <TransactionForm onClose={() => {
-            setShowTransactionForm(false);
-            setSelectedTransaction(null);
-          }} />
+          <TransactionForm onClose={closeTransactionForm} />
         )}
 
         {/* All Transactions Modal */}

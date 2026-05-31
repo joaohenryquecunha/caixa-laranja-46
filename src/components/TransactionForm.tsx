@@ -17,46 +17,6 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-const DRAFT_STORAGE_KEY = 'caixa-laranja-transaction-form-draft';
-
-interface TransactionFormDraft {
-  type: TransactionType | '';
-  amount: string;
-  categoryId: string;
-  companyId: string;
-  description: string;
-  date: string;
-  isRecurring: boolean;
-  recurringTimes: string;
-  recurringStartDate: string;
-}
-
-function readDraft(): TransactionFormDraft | null {
-  try {
-    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as TransactionFormDraft;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(draft: TransactionFormDraft) {
-  try {
-    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-  } catch {
-    // Ignorar falhas de storage
-  }
-}
-
-function clearDraft() {
-  try {
-    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-  } catch {
-    // Ignorar falhas de storage
-  }
-}
-
 interface TransactionFormProps {
   onClose: () => void;
 }
@@ -65,12 +25,6 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
   const { addTransaction, addRecurringTransactions, categories, companies, loading } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const savedDraft = useMemo(() => readDraft(), []);
-
-  const handleClose = useCallback(() => {
-    clearDraft();
-    onClose();
-  }, [onClose]);
   
   // Detectar se é Chrome (para aplicar correções específicas)
   const isChrome = useMemo(() => {
@@ -126,31 +80,15 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     }));
   }, [companies]);
   
-  const [type, setType] = useState<TransactionType | ''>(savedDraft?.type ?? '');
-  const [amount, setAmount] = useState(savedDraft?.amount ?? '');
-  const [categoryId, setCategoryId] = useState(savedDraft?.categoryId ?? '');
-  const [companyId, setCompanyId] = useState(savedDraft?.companyId ?? '');
-  const [description, setDescription] = useState(savedDraft?.description ?? '');
-  const [date, setDate] = useState(savedDraft?.date ?? format(new Date(), 'yyyy-MM-dd'));
-  const [isRecurring, setIsRecurring] = useState(savedDraft?.isRecurring ?? false);
-  const [recurringTimes, setRecurringTimes] = useState(savedDraft?.recurringTimes ?? '12');
-  const [recurringStartDate, setRecurringStartDate] = useState(
-    savedDraft?.recurringStartDate ? new Date(savedDraft.recurringStartDate) : new Date()
-  );
-
-  useEffect(() => {
-    saveDraft({
-      type,
-      amount,
-      categoryId,
-      companyId,
-      description,
-      date,
-      isRecurring,
-      recurringTimes,
-      recurringStartDate: recurringStartDate.toISOString(),
-    });
-  }, [type, amount, categoryId, companyId, description, date, isRecurring, recurringTimes, recurringStartDate]);
+  const [type, setType] = useState<TransactionType | ''>('');
+  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [companyId, setCompanyId] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringTimes, setRecurringTimes] = useState('12');
+  const [recurringStartDate, setRecurringStartDate] = useState(new Date());
 
   // Filtrar categorias pelo tipo selecionado - memoizado e seguro com validação robusta
   const filteredCategories = useMemo(() => {
@@ -280,21 +218,21 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
     // Fechar modal após sucesso
     try {
-      handleClose();
+      onClose();
     } catch (error) {
       console.error('Erro ao fechar modal:', error);
       // Tentar fechar de outra forma no Chrome
       if (isChrome) {
         setTimeout(() => {
           try {
-            handleClose();
+            onClose();
           } catch (e) {
             console.error('Erro ao fechar modal (tentativa 2):', e);
           }
         }, 100);
       }
     }
-  }, [amount, validCategoryId, type, isRecurring, recurringTimes, recurringStartDate, description, companyId, date, addTransaction, addRecurringTransactions, toast, isChrome, handleClose]);
+  }, [amount, validCategoryId, type, isRecurring, recurringTimes, recurringStartDate, description, companyId, date, addTransaction, addRecurringTransactions, toast, isChrome, onClose]);
 
   // Handler para mudança de tipo - limpa categoria e força re-render
   const handleTypeChange = useCallback((newType: TransactionType) => {
@@ -344,7 +282,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleClose}
+            onClick={onClose}
             className="ml-auto text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
@@ -642,7 +580,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             <Button
               type="button"
               variant="secondary"
-              onClick={handleClose}
+              onClick={onClose}
               className="flex-1"
             >
               Cancelar

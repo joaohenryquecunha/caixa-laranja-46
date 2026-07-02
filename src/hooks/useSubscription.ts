@@ -84,32 +84,44 @@ export function useSubscription(enabled = true) {
   }, [checkSubscription, enabled]);
 
   const createCheckout = async () => {
+    const popup = window.open('about:blank', '_blank');
+
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout');
-      
+
       if (error) throw error;
-      
-      if (data.url) {
-        window.open(data.url, '_blank');
-        // Refresh subscription status after a delay
-        setTimeout(checkSubscription, 3000);
+      if (!data?.url) throw new Error('URL do checkout não retornada');
+
+      if (popup) {
+        popup.location.href = data.url;
+      } else {
+        window.location.href = data.url;
       }
+
+      setTimeout(checkSubscription, 3000);
     } catch (error) {
+      popup?.close();
       console.error('Error creating checkout:', error);
       throw error;
     }
   };
 
   const openCustomerPortal = async () => {
+    const popup = window.open('about:blank', '_blank');
+
     try {
       const { data, error } = await supabase.functions.invoke('customer-portal');
-      
+
       if (error) throw error;
-      
-      if (data.url) {
-        window.open(data.url, '_blank');
+      if (!data?.url) throw new Error('URL do portal não retornada');
+
+      if (popup) {
+        popup.location.href = data.url;
+      } else {
+        window.location.href = data.url;
       }
     } catch (error) {
+      popup?.close();
       console.error('Error opening customer portal:', error);
       throw error;
     }

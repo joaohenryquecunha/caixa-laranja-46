@@ -67,7 +67,7 @@ export function LocalCategoryPieChart({ transactions, categories }: LocalCategor
 
   if (categoryData.length === 0) {
     return (
-      <Card className="bg-gradient-card border-border shadow-card p-4 sm:p-6">
+      <Card className="bg-gradient-card border-border shadow-card p-4 sm:p-6 w-full min-w-0">
         <h3 className="text-lg font-semibold text-foreground mb-2">Distribuição por Categoria</h3>
         <p className="text-sm text-muted-foreground">Nenhuma transação encontrada</p>
       </Card>
@@ -93,28 +93,30 @@ export function LocalCategoryPieChart({ transactions, categories }: LocalCategor
   };
 
   return (
-    <Card className="bg-gradient-card border-border shadow-card p-4 sm:p-6">
-      <div className="flex flex-col gap-4">
+    <Card className="bg-gradient-card border-border shadow-card p-4 sm:p-6 w-full min-w-0">
+      <div className="flex flex-col gap-4 min-w-0">
         <h3 className="text-lg font-semibold text-foreground">Distribuição por Categoria</h3>
-        <div className="w-full max-w-[180px] sm:max-w-[320px] mx-auto aspect-square">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                innerRadius="45%"
-                outerRadius="70%"
-                paddingAngle={2}
-                dataKey="amount"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} className="transition-all duration-200 hover:opacity-80 cursor-pointer" />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="flex w-full min-w-0 justify-center">
+          <div className="h-[200px] w-[200px] md:h-[240px] md:w-[240px] lg:h-[280px] lg:w-[280px] shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="42%"
+                  outerRadius="72%"
+                  paddingAngle={2}
+                  dataKey="amount"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} className="transition-all duration-200 hover:opacity-80 cursor-pointer" />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </Card>

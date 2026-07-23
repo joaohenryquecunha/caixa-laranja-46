@@ -113,27 +113,27 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
   }, [searchedTransactions.length, visibleCount]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 p-4 z-40 overflow-auto scrollbar-hide">
-      <div className="mx-auto flex justify-center min-h-full">
-        <Card className="w-full max-w-full sm:max-w-6xl bg-gradient-card border-border shadow-card overflow-visible sm:overflow-hidden">
-          <div className="flex flex-col gap-6 p-4 sm:p-6 sm:max-h-[90vh] sm:overflow-visible">
-          <div className="flex items-center justify-between flex-shrink-0">
-            <h2 className="text-xl font-semibold text-foreground">
+    <div className="fixed inset-0 bg-black/50 p-2 sm:p-4 z-40 overflow-x-hidden overflow-y-auto scrollbar-hide">
+      <div className="mx-auto flex justify-center min-h-full w-full min-w-0">
+        <Card className="w-full max-w-full sm:max-w-6xl bg-gradient-card border-border shadow-card overflow-x-hidden min-w-0 md:flex md:flex-col md:max-h-[90vh]">
+          <div className="flex flex-col gap-4 sm:gap-6 p-3 sm:p-6 min-w-0 md:min-h-0 md:flex-1 md:overflow-hidden">
+          <div className="flex items-center justify-between flex-shrink-0 gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground">
               Todas as Transações
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 flex-shrink-0">
-            <div className="relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 flex-shrink-0 min-w-0">
+            <div className="relative min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar transações..."
@@ -189,16 +189,19 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
               </SelectContent>
             </Select>
 
-            <DateRangePicker 
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
-            />
+            <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+              <DateRangePicker 
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                className="w-full [&_button]:w-full"
+              />
+            </div>
           </div>
 
-          {/* Content Area */}
-          <div className="grid gap-4 sm:gap-6 sm:grid-cols-1 lg:grid-cols-2 overflow-hidden min-h-0">
+          {/* Content Area: empilhado no mobile, 2 colunas a partir de tablet (md) */}
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 md:min-h-0 md:flex-1 overflow-x-hidden min-w-0">
             {/* Left side - Chart */}
-            <div className="lg:col-span-1">
+            <div className="min-w-0">
               <LocalCategoryPieChart 
                 transactions={sortedTransactions}
                 categories={categories}
@@ -206,16 +209,16 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
             </div>
 
             {/* Right side - Transaction List */}
-            <div className="lg:col-span-1">
-              <Card className="bg-gradient-card border-border shadow-card h-full">
-                <div className="p-4 sm:p-6 flex flex-col h-full">
-                  <div className="mb-4 flex-shrink-0">
+            <div className="min-w-0 md:min-h-0 md:flex md:flex-col">
+              <Card className="bg-gradient-card border-border shadow-card h-full min-w-0 md:min-h-0 md:flex-1 md:overflow-hidden">
+                <div className="p-3 sm:p-6 flex flex-col h-full min-w-0 md:min-h-0">
+                  <div className="mb-3 sm:mb-4 flex-shrink-0">
                     <p className="text-sm text-muted-foreground">
                       {searchedTransactions.length} transações encontradas
                     </p>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-3 sm:mb-4 min-w-0 flex-shrink-0">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                       <Input
@@ -229,7 +232,7 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
 
                   <div
                     ref={listContainerRef}
-                    className="flex-1 overflow-y-auto scrollbar-hide"
+                    className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide min-w-0 md:min-h-0"
                   >
                     {transactionsToDisplay.length === 0 ? (
                       <div className="py-6 text-center text-sm text-muted-foreground">

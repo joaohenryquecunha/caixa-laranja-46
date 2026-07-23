@@ -81,7 +81,7 @@ export function TransactionList({
   }
 
   return (
-    <div className={`space-y-3 ${showScrollbar ? 'p-4' : 'px-4 pb-4'}`}>
+    <div className={`space-y-3 min-w-0 ${showScrollbar ? 'p-4' : 'pb-2'}`}>
       {sortedTransactions.map((transaction, index) => {
         const category = getCategoryById(transaction.categoryId);
         const colorClass = getTransactionColor(transaction.type);
@@ -109,16 +109,16 @@ export function TransactionList({
         return (
           <div
             key={transaction.id}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-border transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-fade-in"
+            className="flex items-start justify-between gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border border-border transition-all duration-300 sm:hover:scale-[1.02] hover:shadow-md animate-fade-in min-w-0"
             style={{ 
               backgroundColor: `${category?.color}08`,
               borderColor: `${category?.color}20`,
               animationDelay: `${index * 50}ms`
             }}
           >
-            <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
               <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 transition-all duration-300 hover:scale-110"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 transition-all duration-300 hover:scale-110"
                 style={{ 
                   backgroundColor: `${category?.color}20`,
                   color: category?.color 
@@ -126,26 +126,42 @@ export function TransactionList({
               >
                 {category?.name.charAt(0).toUpperCase()}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 space-y-0.5">
                 <p className="font-medium text-foreground transition-colors duration-200 break-words leading-tight">
                   {transaction.description || category?.name}
                 </p>
-                <p className="text-sm text-muted-foreground transition-colors duration-200">
+                <p className="text-sm text-muted-foreground transition-colors duration-200 truncate">
                   {category?.name}
                 </p>
-                <p className="text-sm text-muted-foreground transition-colors duration-200">
+                <p className="text-xs sm:text-sm text-muted-foreground transition-colors duration-200">
                   {formatDate(transaction.date)}
                   {timeStr && ` às ${timeStr}`}
                 </p>
+                <p className={`font-semibold transition-all duration-300 ${colorClass}`}>
+                  {sign}{formatCurrency(transaction.amount)}
+                </p>
               </div>
             </div>
-            
-            <div className="flex items-center justify-end gap-1 flex-shrink-0 ml-auto">
-              <p className={`font-semibold transition-all duration-300 ${colorClass} text-right mr-1`}> 
-                {sign}{formatCurrency(transaction.amount)}
-              </p>
-              {showActions && (
-                <>
+
+            {showActions && (
+              <div className="flex items-center gap-0.5 flex-shrink-0 self-start">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEditTransaction?.(transaction);
+                  }}
+                  disabled={!onEditTransaction}
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                  title="Editar transação"
+                  aria-label="Editar transação"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                {showDeleteButton && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -153,35 +169,17 @@ export function TransactionList({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      onEditTransaction?.(transaction);
+                      requestDelete(transaction);
                     }}
-                    disabled={!onEditTransaction}
-                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                    title="Editar transação"
-                    aria-label="Editar transação"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    title="Excluir transação"
+                    aria-label="Excluir transação"
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                  {showDeleteButton && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        requestDelete(transaction);
-                      }}
-                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                      title="Excluir transação"
-                      aria-label="Excluir transação"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

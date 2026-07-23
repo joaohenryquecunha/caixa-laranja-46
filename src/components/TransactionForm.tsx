@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
-import { TransactionType } from '@/types/financial';
+import { Transaction, TransactionType } from '@/types/financial';
 import { CategoryManager } from '@/components/CategoryManager';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
@@ -25,14 +25,16 @@ import {
 
 interface TransactionFormProps {
   onClose: () => void;
+  transaction?: Transaction | null;
 }
 
-export function TransactionForm({ onClose }: TransactionFormProps) {
-  const { addTransaction, addRecurringTransactions, categories, companies, loading } = useSupabaseFinancialData();
+export function TransactionForm({ onClose, transaction = null }: TransactionFormProps) {
+  const { addTransaction, updateTransaction, addRecurringTransactions, categories, companies, loading } = useSupabaseFinancialData();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const isClosingRef = useRef(false);
-  const savedDraft = useMemo(() => readTransactionFormDraft(), []);
+  const isEditing = !!transaction;
+  const savedDraft = useMemo(() => (isEditing ? null : readTransactionFormDraft()), [isEditing]);
 
   const handleClose = useCallback(() => {
     isClosingRef.current = true;
@@ -94,20 +96,32 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     }));
   }, [companies]);
   
-  const [type, setType] = useState<TransactionType | ''>(savedDraft?.type ?? '');
-  const [amount, setAmount] = useState(savedDraft?.amount ?? '');
-  const [categoryId, setCategoryId] = useState(savedDraft?.categoryId ?? '');
-  const [companyId, setCompanyId] = useState(savedDraft?.companyId ?? '');
-  const [description, setDescription] = useState(savedDraft?.description ?? '');
-  const [date, setDate] = useState(savedDraft?.date ?? format(new Date(), 'yyyy-MM-dd'));
-  const [isRecurring, setIsRecurring] = useState(savedDraft?.isRecurring ?? false);
+  const [type, setType] = useState<TransactionType | ''>(
+    transaction?.type ?? savedDraft?.type ?? ''
+  );
+  const [amount, setAmount] = useState(
+    transaction ? String(transaction.amount) : (savedDraft?.amount ?? '')
+  );
+  const [categoryId, setCategoryId] = useState(
+    transaction?.categoryId ?? savedDraft?.categoryId ?? ''
+  );
+  const [companyId, setCompanyId] = useState(
+    transaction?.companyId ?? savedDraft?.companyId ?? ''
+  );
+  const [description, setDescription] = useState(
+    transaction?.description ?? savedDraft?.description ?? ''
+  );
+  const [date, setDate] = useState(
+    transaction?.date ?? savedDraft?.date ?? format(new Date(), 'yyyy-MM-dd')
+  );
+  const [isRecurring, setIsRecurring] = useState(isEditing ? false : (savedDraft?.isRecurring ?? false));
   const [recurringTimes, setRecurringTimes] = useState(savedDraft?.recurringTimes ?? '12');
   const [recurringStartDate, setRecurringStartDate] = useState(
     savedDraft?.recurringStartDate ? new Date(savedDraft.recurringStartDate) : new Date()
   );
 
   const persistDraft = useCallback(() => {
-    if (isClosingRef.current) return;
+    if (isClosingRef.current || isEditing) return;
 
     const draft = {
       type,
@@ -123,7 +137,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     if (draftHasContent(draft)) {
       saveTransactionFormDraft(draft);
     }
-  }, [type, amount, categoryId, companyId, description, date, isRecurring, recurringTimes, recurringStartDate]);
+  }, [isEditing, type, amount, categoryId, companyId, description, date, isRecurring, recurringTimes, recurringStartDate]);
 
   useEffect(() => {
     persistDraft();
@@ -190,7 +204,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
     return exists ? trimmedCategoryId : undefined;
   }, [categoryId, filteredCategories, type]);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     try {
       e.preventDefault();
       e.stopPropagation();
@@ -231,7 +245,23 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
       }
     }
 
-    if (isRecurring) {
+    if (isEditing && transaction) {
+      const updated = await updateTransaction(transaction.id, {
+        amount: parseFloat(amount),
+        description,
+        categoryId: validCategoryId!,
+        companyId: companyId || undefined,
+        type,
+        date
+      });
+
+      if (!updated) return;
+
+      toast({
+        title: "Sucesso!",
+        description: "Transação atualizada com sucesso.",
+      });
+    } else if (isRecurring) {
       const times = parseInt(recurringTimes);
       if (times < 1 || times > 60) {
         toast({
@@ -288,7 +318,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         }, 100);
       }
     }
-  }, [amount, validCategoryId, type, isRecurring, recurringTimes, recurringStartDate, description, companyId, date, addTransaction, addRecurringTransactions, toast, isChrome, handleClose]);
+  }, [amount, validCategoryId, type, isEditing, transaction, isRecurring, recurringTimes, recurringStartDate, description, companyId, date, addTransaction, updateTransaction, addRecurringTransactions, toast, isChrome, handleClose]);
 
   // Handler para mudança de tipo - limpa categoria e força re-render
   const handleTypeChange = useCallback((newType: TransactionType) => {
@@ -333,7 +363,7 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
         {/* Header fixo */}
         <div className="flex items-center gap-4 p-4 sm:p-6 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">
-            Nova Transação
+            {isEditing ? 'Editar Transação' : 'Nova Transação'}
           </h2>
           <Button
             variant="ghost"
@@ -520,26 +550,28 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
             </div>
 
             {/* Transação Recorrente */}
-            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
-              <div>
-                <p className="text-sm font-medium text-foreground">Transação recorrente</p>
-                <p className="text-xs text-muted-foreground">
-                  Gere múltiplas transações automáticas com base na data inicial.
-                </p>
+            {!isEditing && (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Transação recorrente</p>
+                  <p className="text-xs text-muted-foreground">
+                    Gere múltiplas transações automáticas com base na data inicial.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant={isRecurring ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsRecurring(!isRecurring)}
+                  className={isRecurring ? "bg-primary text-primary-foreground" : ""}
+                >
+                  {isRecurring ? "Ativada" : "Ativar"}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant={isRecurring ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsRecurring(!isRecurring)}
-                className={isRecurring ? "bg-primary text-primary-foreground" : ""}
-              >
-                {isRecurring ? "Ativada" : "Ativar"}
-              </Button>
-            </div>
+            )}
 
             {/* Campos de Recorrencia */}
-            {isRecurring && (
+            {!isEditing && isRecurring && (
               <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/50 rounded-lg border border-border">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="times">Quantidade de vezes *</Label>
@@ -615,14 +647,14 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
 
             {/* Data */}
             <div className="flex flex-col gap-2">
-              <Label htmlFor="date">Data {isRecurring ? "(será ignorada)" : "*"}</Label>
+              <Label htmlFor="date">Data {!isEditing && isRecurring ? "(será ignorada)" : "*"}</Label>
               <Input
                 id="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="bg-input border-border"
-                disabled={isRecurring}
+                disabled={!isEditing && isRecurring}
               />
             </div>
 
@@ -705,7 +737,11 @@ export function TransactionForm({ onClose }: TransactionFormProps) {
                 }
               }}
             >
-              {isRecurring ? `Criar ${recurringTimes} Transações` : 'Adicionar'}
+              {isEditing
+                ? 'Salvar'
+                : isRecurring
+                  ? `Criar ${recurringTimes} Transações`
+                  : 'Adicionar'}
             </Button>
           </div>
         </div>

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Plus, TrendingUp, TrendingDown, DollarSign, List, Settings, Building2, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
-import { TransactionType } from '@/types/financial';
+import { Transaction, TransactionType } from '@/types/financial';
 import { Button } from '@/components/ui/button';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionForm } from '@/components/TransactionForm';
@@ -60,12 +60,13 @@ export function FinancialDashboard({
     loading
   } = useSupabaseFinancialData();
   
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [allInitialFilterType, setAllInitialFilterType] = useState<string>('all');
 
   const modalOpen = showTransactionForm || showAllTransactions || showCategoryManager || showCompanyManager;
 
   const openTransactionForm = useCallback(() => {
+    setSelectedTransaction(null);
     setTransactionFormModalOpen(true);
     setShowTransactionForm(true);
   }, []);
@@ -325,11 +326,13 @@ export function FinancialDashboard({
               </div>
             </div>
             <div className="max-h-96 overflow-y-auto scrollbar-hide">
-              <TransactionList 
-                transactions={filteredTransactions} 
+              <TransactionList
+                transactions={filteredTransactions}
+                showDeleteButton={true}
                 onEditTransaction={(transaction) => {
                   setSelectedTransaction(transaction);
-                  openTransactionForm();
+                  setTransactionFormModalOpen(true);
+                  setShowTransactionForm(true);
                 }}
                 onDeleteTransaction={deleteTransaction}
                 showScrollbar={true}
@@ -340,7 +343,10 @@ export function FinancialDashboard({
 
         {/* Transaction Form Modal */}
         {showTransactionForm && (
-          <TransactionForm onClose={closeTransactionForm} />
+          <TransactionForm
+            transaction={selectedTransaction}
+            onClose={closeTransactionForm}
+          />
         )}
 
         {/* All Transactions Modal */}

@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { TransactionList } from '@/components/TransactionList';
+import { TransactionForm } from '@/components/TransactionForm';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { LocalCategoryPieChart } from '@/components/LocalCategoryPieChart';
-import { TransactionType } from '@/types/financial';
+import { Transaction, TransactionType } from '@/types/financial';
 
 interface AllTransactionsProps {
   onClose: () => void;
@@ -31,6 +32,7 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterCompany, setFilterCompany] = useState<string>('none');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const transactions = getFilteredTransactions();
 
@@ -239,6 +241,9 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
                           transactions={transactionsToDisplay}
                           showDeleteButton={true}
                           showScrollbar={false}
+                          onEditTransaction={(transaction) => {
+                            setEditingTransaction(transaction);
+                          }}
                           onDeleteTransaction={async (id) => {
                             await deleteTransaction(id);
                           }}
@@ -261,6 +266,13 @@ export function AllTransactions({ onClose, initialFilterType }: AllTransactionsP
           </div>
         </Card>
       </div>
+
+      {editingTransaction && (
+        <TransactionForm
+          transaction={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+        />
+      )}
     </div>
   );
 }

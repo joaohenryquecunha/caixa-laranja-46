@@ -767,6 +767,46 @@ function useSupabaseFinancialDataInternal() {
     });
   }, [user, toast]);
 
+  const updateTransaction = useCallback(async (
+    id: string,
+    transaction: Omit<Transaction, 'id' | 'createdAt'>
+  ): Promise<Transaction | null> => {
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({
+        amount: transaction.amount,
+        description: transaction.description,
+        category_id: transaction.categoryId,
+        company_id: transaction.companyId || null,
+        type: transaction.type,
+        date: transaction.date
+      })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating transaction:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar transação",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    const updatedTransaction: Transaction = mapDbTransaction(data);
+
+    setTransactions(prev =>
+      prev.map(t => t.id === id ? updatedTransaction : t)
+    );
+    await loadTransactions();
+    return updatedTransaction;
+  }, [user, toast]);
+
   const deleteTransaction = useCallback(async (id: string) => {
     if (!user) return;
 
@@ -1688,6 +1728,7 @@ function useSupabaseFinancialDataInternal() {
     setSpecificFilter,
     addTransaction,
     addRecurringTransactions,
+    updateTransaction,
     deleteTransaction,
     addCategory,
     updateCategory,

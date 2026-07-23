@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabaseFinancialData } from '@/hooks/useSupabaseFinancialData';
 import { Transaction, TransactionType } from '@/types/financial';
@@ -36,6 +36,7 @@ export function TransactionList({
     () => sortTransactionsDesc(transactions),
     [transactions]
   );
+  const showActions = showDeleteButton || !!onEditTransaction;
 
   const requestDelete = (transaction: Transaction) => {
     setTransactionToDelete(transaction);
@@ -139,19 +140,46 @@ export function TransactionList({
               </div>
             </div>
             
-            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-              <p className={`font-semibold transition-all duration-300 ${colorClass} text-right sm:text-right`}> 
+            <div className="flex items-center justify-end gap-1 flex-shrink-0 ml-auto">
+              <p className={`font-semibold transition-all duration-300 ${colorClass} text-right mr-1`}> 
                 {sign}{formatCurrency(transaction.amount)}
               </p>
-              {showDeleteButton && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => requestDelete(transaction)}
-                  className="text-muted-foreground hover:text-destructive p-2 transition-all duration-200 hover:scale-110"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              {showActions && (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onEditTransaction?.(transaction);
+                    }}
+                    disabled={!onEditTransaction}
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                    title="Editar transação"
+                    aria-label="Editar transação"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  {showDeleteButton && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        requestDelete(transaction);
+                      }}
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      title="Excluir transação"
+                      aria-label="Excluir transação"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
